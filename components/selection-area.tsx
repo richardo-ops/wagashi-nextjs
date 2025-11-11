@@ -8,7 +8,7 @@ import type { PlacedItem, SweetItem, DividerItem } from "@/types/types"
 import SweetItemComponent from "./sweet-item"
 import DividerItemComponent from "./divider-item"
 import { fetchSweets, fetchDividers } from "@/services/api-service"
-import { Loader2, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, RefreshCw, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface SelectionAreaProps {
@@ -27,6 +27,7 @@ export default function SelectionArea({ placedItems, setPlacedItems, inventoryDa
   const tabsListRef = useRef<HTMLDivElement>(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
   const [showRightArrow, setShowRightArrow] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
 
   // カテゴリーの配列（動的に生成）
   const getCategories = () => {
@@ -177,19 +178,32 @@ export default function SelectionArea({ placedItems, setPlacedItems, inventoryDa
     }
   }
 
-  const filteredSweets = sweets.filter((sweet) => sweet.category === activeTab)
+  // 指定したカテゴリに対する検索＋カテゴリフィルタを返すヘルパー
+  const getFilteredSweets = (category: string) => {
+    const term = searchTerm.trim().toLowerCase()
+    return sweets.filter((s) => {
+      if (category !== s.category) return false
+      if (!term) return true
+      // 名前と説明を対象に検索（必要であれば他のフィールドも追加可）
+      const inName = s.name?.toLowerCase().includes(term)
+      const inDesc = s.description?.toLowerCase().includes(term)
+      return inName || inDesc
+    })
+  }
+
+  const filteredForActiveTab = activeTab ? getFilteredSweets(activeTab) : []
 
   console.log("現在のアクティブタブ:", activeTab)
   console.log("フィルタリング前の商品数:", sweets.length)
-  console.log("フィルタリング後の商品数:", filteredSweets.length)
-  console.log("フィルタリングされた商品:", filteredSweets)
+  console.log("検索語:", searchTerm)
+  console.log("フィルタリング後(アクティブタブ)の商品数:", filteredForActiveTab.length)
 
   // 在庫切れの和菓子の数を取得
-  const outOfStockCount = filteredSweets.filter((sweet) => !sweet.inStock).length
-  const totalCount = filteredSweets.length
+  const outOfStockCount = filteredForActiveTab.filter((sweet) => !sweet.inStock).length
+  const totalCount = filteredForActiveTab.length
 
   return (
-    <div data-testid="selection-area" className="w-full lg:w-80 bg-white p-3 sm:p-4 rounded-sm shadow-md flex flex-col h-full border border-[var(--color-indigo-light)]">
+    <div className="w-full lg:w-80 bg-white p-3 sm:p-4 rounded-sm shadow-md flex flex-col h-full border border-[var(--color-indigo-light)]">
       <h2 className="text-lg sm:text-xl font-medium mb-3 sm:mb-4 text-[var(--color-indigo)] tracking-wide flex items-center justify-between">
         <div className="flex items-center">
           <span className="inline-block w-1 h-5 sm:h-6 bg-[var(--color-indigo)] mr-2"></span>
@@ -205,6 +219,18 @@ export default function SelectionArea({ placedItems, setPlacedItems, inventoryDa
           <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
         </Button>
       </h2>
+
+      {/* 検索入力（タブ間で検索語を共有） */}
+      <div className="relative mb-2">
+        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="和菓子を検索..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-sm text-sm"
+        />
+      </div>
 
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center">
@@ -279,17 +305,20 @@ export default function SelectionArea({ placedItems, setPlacedItems, inventoryDa
           <div className="flex-1 overflow-hidden mt-2">
             {activeTab && categories
               .filter((category) => category !== "仕切り")
-              .map((category) => (
-                <TabsContent key={category} value={category} className="h-full overflow-y-auto">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2 sm:gap-4 pb-4 max-h-[40vh] lg:max-h-[60vh] overflow-y-auto">
-                    {filteredSweets.length > 0 ? (
-                      filteredSweets.map((sweet) => <SweetItemComponent key={sweet.id} item={sweet} />)
-                    ) : (
-                      <div className="col-span-2 sm:col-span-3 lg:col-span-2 text-center py-6 sm:py-8 text-gray-500 text-sm">このカテゴリの商品はありません</div>
-                    )}
-                  </div>
-                </TabsContent>
-              ))}
+              .map((category) => {
+                const filteredForCategory = getFilteredSweets(category)
+                return (
+                  <TabsContent key={category} value={category} className="h-full overflow-y-auto">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2 sm:gap-4 pb-4 max-h-[40vh] lg:max-h-[60vh] overflow-y-auto">
+                      {filteredForCategory.length > 0 ? (
+                        filteredForCategory.map((sweet) => <SweetItemComponent key={sweet.id} item={sweet} />)
+                      ) : (
+                        <div className="col-span-2 sm:col-span-3 lg:col-span-2 text-center py-6 sm:py-8 text-gray-500 text-sm">このカテゴリの商品はありません</div>
+                      )}
+                    </div>
+                  </TabsContent>
+                )
+              })}
 
             {activeTab && (
               <TabsContent value="仕切り" className="h-full overflow-y-auto pr-2">

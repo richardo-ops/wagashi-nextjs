@@ -809,8 +809,8 @@ export default function ProductsPage() {
                                 {product.allergyInfo && (
                                   <span>アレルギー: {product.allergyInfo}</span>
                                 )}
-                                {product.stock && (
-                                  <span>在庫: {product.stock.quantity}個</span>
+                                {product.stocks && (
+                                  <span>在庫: {stock.quantity}個</span>
                                 )}
                               </div>
                               {(product.ingredients || product.nutritionInfo || product.shelfLife || product.storageMethod) && (

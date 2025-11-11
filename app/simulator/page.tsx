@@ -260,7 +260,7 @@ export default function WagashiSimulator() {
             
             {/* タイトル */}
             <div className="flex-1 text-center">
-              <h1 className="text-sm sm:text-lg font-medium tracking-wider text-gray-800">和菓子詰め合わせシミュレーター</h1>
+              <h1 className="text-sm sm:text-lg font-medium tracking-wider text-gray-800">つめつめ</h1>
             </div>
             
             <div className="w-[120px] sm:w-auto"></div> {/* 右側のスペース調整 */}
