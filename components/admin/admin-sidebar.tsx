@@ -71,17 +71,16 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      <div className="border-t p-4">
-        {/* フロントページへのリンク */}
-        <a
-          href="/"
-          target="_blank"
-          rel="noopener noreferrer"
+
+      <div className="border-t p-4 space-y-2">
+        {/* 店舗選択ページへのリンク（同タブ） */}
+        <Link
+          href="/store-selection"
           className="flex w-full items-center px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900"
         >
-          <ExternalLink className="mr-3 h-5 w-5 text-gray-400" />
-          フロントページへ
-        </a>
+          <Store className="mr-3 h-5 w-5 text-gray-400" />
+          店舗選択へ
+        </Link>
       </div>
 
       <div className="border-t p-4">

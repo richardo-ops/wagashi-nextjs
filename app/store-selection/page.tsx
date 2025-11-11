@@ -96,6 +96,15 @@ export default function StoreSelectionPage() {
               <Download className="h-4 w-4" />
               カスタマーコードで復元
             </Button>
+            <div className="ml-4">{/*ここから8行追加*/}
+              <Button
+                variant="outline"
+                onClick={() => router.push('/admin')}
+                className="border border-gray-400 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-100"
+                >
+                管理画面へ
+              </Button>
+            </div>
           </div>
         </div>
 
