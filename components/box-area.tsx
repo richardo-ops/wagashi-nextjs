@@ -61,44 +61,65 @@ export default function BoxArea({
   // 仕切り長さ調整用の状態
   const [resizingDivider, setResizingDivider] = useState<PlacedItem | null>(null)
 
-  // レスポンシブな最大エリアサイズを定義
-  const getMaxAreaSize = () => {
+  // 表示上の最大サイズを定義（cm単位の箱サイズに基づいて計算）
+  const getMaxDisplaySize = () => {
     if (typeof window !== 'undefined') {
       const viewportWidth = window.innerWidth
       const viewportHeight = window.innerHeight
       
       // デスクトップ（lg以上）
       if (viewportWidth >= 1024) {
-        return Math.min(900, viewportWidth * 0.6, viewportHeight * 0.85)
+        return {
+          maxWidth: 900,
+          maxHeight: 700,
+        }
       }
       // タブレット（md以上）
       else if (viewportWidth >= 768) {
-        return Math.min(700, viewportWidth * 0.8, viewportHeight * 0.75)
+        return {
+          maxWidth: 600,
+          maxHeight: 500,
+        }
       }
       // モバイル
       else {
-        return Math.min(450, viewportWidth * 0.98, viewportHeight * 0.65)
+        return {
+          maxWidth: 400,
+          maxHeight: 350,
+        }
       }
     }
-    return 900 // サーバーサイドレンダリング時のデフォルト
+    return { maxWidth: 900, maxHeight: 700 } // サーバーサイドレンダリング時のデフォルト
   }
   
-  const [maxAreaSize, setMaxAreaSize] = useState(getMaxAreaSize())
+  const [maxDisplaySize, setMaxDisplaySize] = useState(getMaxDisplaySize())
+  
   // ウィンドウリサイズ時にサイズを更新
   useEffect(() => {
     const handleResize = () => {
-      setMaxAreaSize(getMaxAreaSize())
+      setMaxDisplaySize(getMaxDisplaySize())
     }
     
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
   
-  // セルサイズを動的に計算（最小サイズを確保）
-  const cellSize = Math.max(
-    Math.floor(maxAreaSize / Math.max(gridSize.width, gridSize.height)),
-    12 // 最小セルサイズをさらに小さく
-  )
+  // セルサイズを動的に計算（幅と高さの制約を考慮）
+  const calculateCellSize = () => {
+    // グリッドの比率を計算
+    const aspectRatio = gridSize.width / gridSize.height
+    
+    // 最大表示サイズ内に収まるようにセルサイズを計算
+    let cellSizeByWidth = Math.floor(maxDisplaySize.maxWidth / gridSize.width)
+    let cellSizeByHeight = Math.floor(maxDisplaySize.maxHeight / gridSize.height)
+    
+    // 両方の制約を満たすセルサイズを選択（より小さい方）
+    const cellSize = Math.min(cellSizeByWidth, cellSizeByHeight)
+    
+    return Math.max(cellSize, 8) // 最小セルサイズは8px
+  }
+  
+  const cellSize = calculateCellSize()
 
   // 新しく追加されたアイテムのIDを追跡
   const [newItemIds, setNewItemIds] = useState<Set<string>>(new Set())
@@ -1241,16 +1262,13 @@ export default function BoxArea({
           }}
           data-testid="box-area"
           className={`relative border-2 border-[var(--color-indigo)] bg-[var(--color-beige-dark)] ${isOver && canDrop ? "drag-over" : ""
-            } rounded shadow-md max-w-full overflow-hidden`}
+            } rounded shadow-md overflow-hidden`}
           style={{
-            width: gridSize.width * cellSize, // 実際のグリッドサイズのみ
-            height: gridSize.height * cellSize, // 実際のグリッドサイズのみ
-            maxWidth: maxAreaSize, // レスポンシブな最大サイズを制限
-            maxHeight: maxAreaSize, // レスポンシブな最大サイズを制限
+            width: Math.min(gridSize.width * cellSize, maxDisplaySize.maxWidth),
+            height: Math.min(gridSize.height * cellSize, maxDisplaySize.maxHeight),
             display: "grid",
             gridTemplateColumns: `repeat(${gridSize.width}, ${cellSize}px)`,
             gridTemplateRows: `repeat(${gridSize.height}, ${cellSize}px)`,
-            minWidth: 'min-content', // 最小幅を内容に合わせる
           }}
         >
         {/* グリッド線 */}
