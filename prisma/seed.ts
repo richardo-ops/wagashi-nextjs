@@ -613,15 +613,15 @@ async function main() {
      name: 'くず湯 白',
      category: '季節限定',
      price: 184,
-     size: '3.3x5.2',
+     size: '4.0x5.0',
      description: 'くず湯',
      allergyInfo: '小麦',
-     calories: 170,
+     calories: 150,
      beforeImagePath: '/images/wagashi/n_kuzuyu_siro.jpg',
      afterImagePath: '/images/wagashi/n_kuzuyu_siro.jpg',
-     ingredients: '砂糖(国内製造)、栗甘露煮、小豆、手芒豆、小麦粉、砂糖結合水飴、米粉、食塩、寒天、麦芽糖/トレハロース、酸化防止剤（Ｖ．Ｃ）、クチナシ色素',
+     ingredients: '砂糖(国内製造)、馬鈴薯でん粉、葛粉、もち米（国産）、寒天、水飴、食塩 /着色料（コチニール、赤3)',
      nutritionInfo: '1個平均45ｇあたり エネルギー170kcal、たんぱく質3.4g、脂質0.4g、炭水化物38.2g、食塩相当量0.03g',
-     shelfLife: '出荷日を含め30日',
+     shelfLife: '出荷日を含め60-90日',
      storageMethod: '直射日光・高温多湿を避けて保存してください。'
    },
  {
@@ -629,15 +629,15 @@ async function main() {
      name: 'くず湯 汁粉',
      category: '季節限定',
      price: 184,
-     size: '3.3x5.2',
+     size: '4.0x5.0',
      description: 'くず湯',
      allergyInfo: '該当無し',
-     calories: 170,
+     calories: 150,
      beforeImagePath: '/images/wagashi/n_kuzuyu_ogura.jpg',
      afterImagePath: '/images/wagashi/n_kuzuyu_ogura.jpg',
-     ingredients: '砂糖(国内製造)、栗甘露煮、小豆、手芒豆、小麦粉、砂糖結合水飴、米粉、食塩、寒天、麦芽糖/トレハロース、酸化防止剤（Ｖ．Ｃ）、クチナシ色素',
+     ingredients: '砂糖（国内製造)、馬鈴薯でん粉、抹茶（緑茶：国産）、葛粉、もち米（国産）、寒天、水飴、食塩 /着色料（クチナシ、黄4、黄5、青1、青2）',
      nutritionInfo: '1個平均45ｇあたり エネルギー170kcal、たんぱく質3.4g、脂質0.4g、炭水化物38.2g、食塩相当量0.03g',
-     shelfLife: '出荷日を含め30日',
+     shelfLife: '出荷日を含め60-90日',
      storageMethod: '直射日光・高温多湿を避けて保存してください。'
    },
 {
@@ -645,15 +645,15 @@ async function main() {
      name: 'くず湯 抹茶',
      category: '季節限定',
      price: 184,
-     size: '3.3x5.2',
+     size: '4.0x5.0',
      description: 'くず湯',
      allergyInfo: '該当無し',
-     calories: 170,
+     calories: 150,
      beforeImagePath: '/images/wagashi/n_kuzuyu_mattya.jpg',
      afterImagePath: '/images/wagashi/n_kuzuyu_mattya.jpg',
-     ingredients: '砂糖(国内製造)、栗甘露煮、小豆、手芒豆、小麦粉、砂糖結合水飴、米粉、食塩、寒天、麦芽糖/トレハロース、酸化防止剤（Ｖ．Ｃ）、クチナシ色素',
+     ingredients: '砂糖（国内製造)、馬鈴薯でん粉、小豆晒し餡、葛粉、もち米（国産）、寒天、水飴、食塩 /着色料（コチニール、赤3）',
      nutritionInfo: '1個平均45ｇあたり エネルギー170kcal、たんぱく質3.4g、脂質0.4g、炭水化物38.2g、食塩相当量0.03g',
-     shelfLife: '出荷日を含め30日',
+     shelfLife: '出荷日を含め60-90日',
      storageMethod: '直射日光・高温多湿を避けて保存してください。'
    },
 {
@@ -791,17 +791,17 @@ async function main() {
   const storeData = [
     {
       id: 'test-store-001',
-      name: '新宿店',
-      description: '新宿駅近くの便利な立地',
-      address: '東京都新宿区新宿3-1-1',
-      phone: '03-2345-6789'
+      name: '本店',
+      description: '彩雲堂本店',
+      address: '島根県松江市天神町124',
+      phone: '0852-21-2727'
     },
     {
       id: 'test-store-002',
-      name: '銀座店',
-      description: '高級感あふれる銀座の店舗',
-      address: '東京都中央区銀座4-1-1',
-      phone: '03-3456-7890'
+      name: '出雲店',
+      description: '彩雲堂出雲店',
+      address: '島根県出雲市姫原町',
+      phone: '0853-23-0603'
     }
   ]
 
