@@ -102,6 +102,16 @@ export default function PrintModal({ placedItems, boxSize, infoSettings, onClose
       .filter(Boolean)
       .join("\n")
 
+      //印刷用HTMLの合計計算
+    // 税込み合計を先に計算（和菓子は小計に対して8%）
+    // 最後に合算して小数点切り捨て
+    const sweetsSubtotal = placedItems
+      .filter((item) => item.type === "sweet" && item.price)
+      .reduce((total, item) => total + (item.price || 0), 0)
+    const sweetsWithTax = sweetsSubtotal * 1.08
+    const boxAmount = (boxPrice || 0)
+    const totalWithTax = Math.floor(sweetsWithTax + boxAmount).toLocaleString()
+
     // 印刷用のHTMLを生成
     return `
       <!DOCTYPE html>

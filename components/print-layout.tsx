@@ -43,7 +43,10 @@ export default function PrintLayout({
   const dividerItems = placedItems.filter((item) => item.type === "divider")
 
   // 合計金額を計算
-  const totalPrice = sweetItems.reduce((total, item) => total + (item.price || 0), 0)
+  const sweetsSubtotal = sweetItems.reduce((total, item) => total + (item.price || 0), 0)
+  const sweetsWithTax = sweetsSubtotal * 1.08
+  const boxAmount = (boxPrice || 0)
+  const totalPrice = Math.floor(sweetsWithTax + boxAmount)
 
   // sweetsデータを取得
   useEffect(() => {

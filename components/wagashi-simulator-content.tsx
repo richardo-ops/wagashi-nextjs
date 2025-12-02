@@ -146,15 +146,18 @@ export default function WagashiSimulatorContent({
 
   // 合計金額を計算する関数
   const calculateTotalPrice = () => {
-    const sweetsTotal = placedItems
+    const subTotal = placedItems
       .filter((item) => item.type === "sweet" && item.price)
       .reduce((total, item) => total + (item.price || 0), 0)
     
     const boxPrice = selectedBoxType?.price || 0
+    const boxAmount = boxPrice
+    const sweetsTotal = subTotal*1.08
     // 追加：袋の価格を計算
     const bagTypeObj = BAG_TYPES.find(b => b.key === selectedBag.type)
     const bagTotal = bagTypeObj ? bagTypeObj.price * (selectedBag.qty || 0) : 0
-    return sweetsTotal + boxPrice + bagTotal
+    const total = Math.floor(sweetsTotal + boxAmount + bagTotal)
+    return total
   }
 
   // 詰め合わせの上限金額（円）を設定する状態
