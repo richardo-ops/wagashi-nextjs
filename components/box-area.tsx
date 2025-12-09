@@ -1148,7 +1148,7 @@ export default function BoxArea({
             setErrorModal({
               visible: true,
               title: "回転エラー",
-              message: "回転するとグリッド範囲外にはみ出してしまいます。位置を調整してから回転してください。",
+              message: "回転すると箱の外にはみ出してしまいます。位置を調整してから回転してください。",
             })
             // 元の状態を維持
             return item
@@ -1183,7 +1183,7 @@ export default function BoxArea({
             setErrorModal({
               visible: true,
               title: "回転エラー",
-              message: "回転すると他のアイテムと重なってしまいます。位置を調整してから回転してください。",
+              message: "回転すると他の商品と重なってしまいます。位置を調整してから回転してください。",
             })
             // 元の状態を維持
             return item
@@ -1194,6 +1194,7 @@ export default function BoxArea({
             ...item,
             width: newWidth,
             height: newHeight,
+            rotation: item.rotation === 0 ? 90 : item.rotation === 90 ? 180 : item.rotation === 180 ? 270 : 0,
           }
         }
         return item

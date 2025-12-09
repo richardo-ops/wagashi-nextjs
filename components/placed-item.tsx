@@ -231,7 +231,11 @@ export default function PlacedItemComponent({
             src={item.imageUrl || "/placeholder.svg"}
             alt={item.name}
             className="w-full h-full"
-            style={{ objectFit: "contain" }}
+            style={{
+              objectFit: "contain",
+              transform: item.rotation ? `rotate(${item.rotation}deg)` : "none",
+              transformOrigin: "center center",
+            }}
           />
           {item.isLocked && (
             <div className="absolute top-1 right-1 bg-white rounded-full p-1">
