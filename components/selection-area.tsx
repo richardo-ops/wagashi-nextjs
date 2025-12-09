@@ -6,14 +6,6 @@ import { useState, useEffect, useRef } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { PlacedItem, SweetItem, DividerItem } from "@/types/types"
 
-// 追加：袋の種類と価格
-const BAG_TYPES = [
-  { key: "mini", label: "ミニ袋", price: 11 },
-  { key: "small", label: "小袋", price: 11 },
-  { key: "large", label: "大袋", price: 22 },
-  { key: "wide", label: "底広袋", price: 22 },
-]//ここまで
-
 import SweetItemComponent from "./sweet-item"
 import DividerItemComponent from "./divider-item"
 import { fetchSweets, fetchDividers } from "@/services/api-service"
@@ -25,13 +17,9 @@ interface SelectionAreaProps {
   setPlacedItems: React.Dispatch<React.SetStateAction<PlacedItem[]>>
   inventoryData?: SweetItem[] // 在庫データを受け取るプロパティを追加
   selectedStoreId: string
-  //追加
-  selectedBag?: { type: string; qty: number }
-  setSelectedBag?: (bag: { type: string; qty: number }) => void
-  //ここまで
 }
 
-export default function SelectionArea({ placedItems, setPlacedItems, inventoryData, selectedStoreId, selectedBag, setSelectedBag }: SelectionAreaProps) {
+export default function SelectionArea({ placedItems, setPlacedItems, inventoryData, selectedStoreId }: SelectionAreaProps) {
   const [activeTab, setActiveTab] = useState("餅菓子")
   const [sweets, setSweets] = useState<SweetItem[]>([])
   const [dividers, setDividers] = useState<DividerItem[]>([])
@@ -42,18 +30,6 @@ export default function SelectionArea({ placedItems, setPlacedItems, inventoryDa
   const [showRightArrow, setShowRightArrow] = useState(false)
   //もとからあるけどいるのか不明
   const [searchTerm, setSearchTerm] = useState("")
-
-  // 追加：袋選択状態（ローカル）
-  const [localBagType, setLocalBagType] = useState(selectedBag?.type || "mini")
-  const [localBagQty, setLocalBagQty] = useState(selectedBag?.qty ?? 0)
-
-  // 親に反映
-  useEffect(() => {
-    if (setSelectedBag) {
-      setSelectedBag({ type: localBagType, qty: localBagQty })
-    }
-  }, [localBagType, localBagQty])
-  //ここまで
 
   // カテゴリーの配列（動的に生成）
   const getCategories = () => {
@@ -242,32 +218,6 @@ const getFilteredSweets = (category: string) => {
 
   return (
     <div className="w-full lg:w-80 bg-white p-3 sm:p-4 rounded-sm shadow-md flex flex-col h-full border border-[var(--color-indigo-light)]">
-      
-      {/* 追加：袋選択UI */}
-      <div className="mb-4">
-        <div className="font-semibold text-[var(--color-indigo)] mb-2">袋の選択</div>
-        <div className="flex gap-2 items-center">
-          <select
-            value={localBagType}
-            onChange={e => setLocalBagType(e.target.value)}
-            className="border rounded px-2 py-1 text-sm"
-          >
-            {BAG_TYPES.map(bag => (
-              <option key={bag.key} value={bag.key}>{bag.label}（{bag.price}円）</option>
-            ))}
-          </select>
-          <input
-            type="number"
-            min={0}
-            max={10}
-            value={localBagQty}
-            onChange={e => setLocalBagQty(Math.max(0, Math.min(10, Number(e.target.value))))}
-            className="border rounded px-2 py-1 w-16 text-sm"
-          />
-          <span className="text-sm">枚</span>
-        </div>
-      </div>
-      {/* ここまで */}
       
       <h2 className="text-lg sm:text-xl font-medium mb-3 sm:mb-4 text-[var(--color-indigo)] tracking-wide flex items-center justify-between">
         <div className="flex items-center">

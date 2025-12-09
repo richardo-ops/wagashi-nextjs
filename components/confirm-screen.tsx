@@ -4,13 +4,9 @@ import React, { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import type { PlacedItem, BoxSize, BoxType } from "@/types/types"
 
-export type Product = {
-  id: string
-  name: string
-  qty: number
-  price: number
-  image: string
-}
+import type {Product, BagOption} from "@/types/types"
+import {BAG_OPTIONS} from "@/types/types"
+
 
 type Props = {
   products: Product[]
@@ -146,13 +142,23 @@ export default function ConfirmScreen({
 
   const [activeTab, setActiveTab] = useState<number>(activeTabIndex)
   const [needsNoshi, setNeedsNoshi] = useState<boolean>(false)
-  const [needsBag, setNeedsBag] = useState<boolean>(false)
+  //const [needsBag, setNeedsBag] = useState<boolean>(false)
+  const [bagOption, setBagOption] = React.useState<BagOption>('none')
   const [isComplete, setIsComplete] = useState<boolean>(false)
-  const bagPrice = 5 // 袋は +5円
+  
+  // 選択中の袋価格を取り出し
+  const selectedBag = BAG_OPTIONS.find(o => o.key === bagOption) ?? BAG_OPTIONS[0]
+  const bagPrice = selectedBag.price
+
   const boxPrice = selectedBoxType?.price || 0
-  const productTotal = products.reduce((s: number, p: Product) => s + p.price, 0)
-  const bagTotal = needsBag ? bagPrice : 0
-  const total = productTotal + boxPrice + bagTotal
+  
+  // 小計（商品合計）
+  const productTotal = products.reduce((sum: number, p: Product) => {
+    const qty = Number.isFinite(p.qty) ? p.qty : 1 // qty未設定の保険
+    return sum + p.price * qty
+  }, 0)
+
+  const total = productTotal*1.08 + boxPrice + bagPrice
   const tabs = ["商品", "アレルゲン", "のし", "袋"]
 
   if (isComplete) {
@@ -164,7 +170,7 @@ export default function ConfirmScreen({
         boxSize={boxSize}
         selectedBoxType={selectedBoxType}
         needsNoshi={needsNoshi}
-        needsBag={needsBag}
+        bagOption={bagOption}
         onBack={() => setIsComplete(false)}
         onSave={() => alert("データ保存処理（実装例）")}
       />
@@ -313,62 +319,87 @@ export default function ConfirmScreen({
               </div>
             </section>
 
-            {/* 袋タブ */}
-            <section
-              id="tab-panel-3"
-              role="tabpanel"
-              aria-labelledby="tab-3"
-              hidden={activeTab !== 3}
-            >
-              <h2 className="text-lg font-extrabold text-gray-900 mb-3">袋オプション</h2>
+            
+      {/* 袋タブ */}
+      <section
+        id="tab-panel-3"
+        role="tabpanel"
+        aria-labelledby="tab-3"
+        hidden={activeTab !== 3}
+      >
+        <h2 className="text-lg font-extrabold text-gray-900 mb-3">袋オプション</h2>
 
-              <div className="flex items-center gap-6">
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    name="bag"
-                    checked={needsBag}
-                    onChange={() => setNeedsBag(true)}
-                  />
-                  <span className="ml-2 text-sm">必要 (+{formatYen(bagPrice)})</span>
-                </label>
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    name="bag"
-                    checked={!needsBag}
-                    onChange={() => setNeedsBag(false)}
-                  />
-                  <span className="ml-2 text-sm">不要</span>
-                </label>
-              </div>
+        <div className="flex flex-wrap items-center gap-6">
+          {BAG_OPTIONS.map((opt) => (
+            <label key={opt.key} className="inline-flex items-center">
+              <input
+                type="radio"
+                name="bag-option"
+                value={opt.key}
+                checked={bagOption === opt.key}
+                onChange={() => setBagOption(opt.key)}
+              />
+              <span className="ml-2 text-sm">
+                {opt.label}
+                {opt.price > 0 ? ` (+${formatYen(opt.price)})` : ''}
+              </span>
+            </label>
+          ))}
+        </div>
 
-              <div className="text-sm text-gray-600 mt-3">選択: {needsBag ? `必要 (+${formatYen(bagPrice)})` : "不要"}</div>
-            </section>
+        <div className="text-sm text-gray-600 mt-3">
+          選択: {selectedBag.label}
+          {selectedBag.price > 0 ? ` (+${formatYen(selectedBag.price)})` : ''}
+        </div>
+      </section>
 
-            {/* 共通の合計と購入ボタン */}
-            <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
-             {/* 箱代 */}
-            <div className="mt-4 pt-3 border-t border-gray-200">
+
+            
+          {/* 共通の合計と購入ボタン */}
+          <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
+
+            {/* 左側：明細（箱代・袋代） */}
+            <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
+              {/* 箱代 */}
               <div className="flex items-center justify-between">
-                <div className="text-gray-900 text-base font-medium">箱代 ({selectedBoxType?.name || boxSize})</div>
-                <div className="text-gray-900 text-base font-semibold">{formatYen(boxPrice)}</div>
-              </div>
-            </div> 
-              <div>
-                <div className="text-sm text-gray-700">合計金額</div>
-                <div className="text-3xl font-bold text-gray-900 mt-1">{formatYen(total)}</div>
+                <div className="text-gray-900 text-base font-medium">
+                  箱代（{selectedBoxType?.name || boxSize}）
+                </div>
+                <div className="text-gray-900 text-base font-semibold">
+                  {formatYen(boxPrice)}
+                </div>
               </div>
 
-              <div>
-                <button
-                  onClick={() => setIsComplete(true)}
-                  className="px-6 py-2 rounded-full bg-gradient-to-tr from-blue-400 to-blue-500 text-white font-semibold shadow"
-                >
-                  購入
-                </button>
+              {/* 袋代（選択内容を表示） */}
+              <div className="flex items-center justify-between">
+                <div className="text-gray-900 text-base font-medium">
+                  袋（{selectedBag.label}）
+                </div>
+                <div className="text-gray-900 text-base font-semibold">
+                  {formatYen(bagPrice)}
+                </div>
               </div>
             </div>
+
+            {/* 右側：合計金額 */}
+            <div>
+              <div className="text-sm text-gray-700">合計金額</div>
+              <div className="text-3xl font-bold text-gray-900 mt-1">
+                {formatYen(total)}
+              </div>
+            </div>
+
+            {/* 購入ボタン */}
+            <div>
+              <button
+                onClick={() => setIsComplete(true)}
+                className="px-6 py-2 rounded-full bg-gradient-to-tr from-blue-400 to-blue-500 text-white font-semibold shadow"
+              >
+                購入
+              </button>
+            </div>
+          </div>
+
           </div>
         </div>
       </div>

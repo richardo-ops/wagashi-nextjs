@@ -5,14 +5,6 @@ import type React from "react"
 import BoxArea from "@/components/box-area"
 import SelectionArea from "@/components/selection-area"
 
-//追加：袋の種類と価格（グローバル）
-const BAG_TYPES = [
-  { key: "mini", label: "ミニ袋", price: 11 },
-  { key: "small", label: "小袋", price: 11 },
-  { key: "large", label: "大袋", price: 22 },
-  { key: "wide", label: "底広袋", price: 22 },
-]
-
 import HelpModal from "@/components/help-modal"
 import InfoSettingsModal, { type InfoDisplaySettings } from "@/components/info-settings-modal"
 import InventorySettingsModal from "@/components/inventory-settings-modal"
@@ -153,10 +145,7 @@ export default function WagashiSimulatorContent({
     const boxPrice = selectedBoxType?.price || 0
     const boxAmount = boxPrice
     const sweetsTotal = subTotal*1.08
-    // 追加：袋の価格を計算
-    const bagTypeObj = BAG_TYPES.find(b => b.key === selectedBag.type)
-    const bagTotal = bagTypeObj ? bagTypeObj.price * (selectedBag.qty || 0) : 0
-    const total = Math.floor(sweetsTotal + boxAmount + bagTotal)
+    const total = Math.floor(sweetsTotal + boxAmount)
     return total
   }
 

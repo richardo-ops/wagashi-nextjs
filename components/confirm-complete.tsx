@@ -3,15 +3,18 @@
 import React from "react"
 import { useRouter } from "next/navigation"
 import { BoxPreview } from "./confirm-screen"
-import type { PlacedItem, BoxSize, BoxType } from "@/types/types"
+import type { PlacedItem, BoxSize, BoxType} from "@/types/types"
+import type {Product, BagOption} from "@/types/types"
+import {BAG_OPTIONS} from "@/types/types"
+
 
 interface ConfirmCompleteProps {
-  products: any[]
+  products: Product[]
   placedItems: PlacedItem[]
   boxSize: BoxSize
   selectedBoxType?: BoxType | null
   needsNoshi?: boolean
-  needsBag?: boolean
+  bagOption?: BagOption
   onBack?: () => void
   onSave?: () => void
 }
@@ -22,7 +25,7 @@ export default function ConfirmComplete({
   boxSize,
   selectedBoxType,
   needsNoshi,
-  needsBag,
+  bagOption,
   onBack,
   onSave,
 }: ConfirmCompleteProps) {
@@ -41,14 +44,19 @@ export default function ConfirmComplete({
   const handleCancel = () => {
     setShowDialog(false);
   }
-  // 商品合計
-  const productsTotal = products.reduce((sum, p) => sum + (p.price || 0), 0);
+  // 小計（商品合計）
+  const productTotal = products.reduce((sum: number, p: Product) => {
+    const qty = Number.isFinite(p.qty) ? p.qty : 1 // qty未設定の保険
+    return sum + p.price * qty
+  }, 0)
   // 箱代（selectedBoxType.priceがあれば加算）
   const boxPrice = selectedBoxType?.price || 0;
-  // 袋代（needsBagがtrueなら100円、falseなら0円。金額は必要に応じて調整）
-  const bagPrice = needsBag ? 100 : 0;
+  // 袋代
+  const selected = BAG_OPTIONS.find(o => o.key === (bagOption ?? 'none')) ?? BAG_OPTIONS[0]
+  const bagPrice = selected.price
+
   // 合計金額
-  const totalPrice = productsTotal + boxPrice + bagPrice;
+  const totalPrice = productTotal*1.08 + boxPrice + bagPrice;
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-sm p-8 flex flex-col items-center">
@@ -64,7 +72,7 @@ export default function ConfirmComplete({
             <div className="mb-1">商品: {products.map(p => p.name).join(", ") || "なし"}</div>
             <div className="mb-1">箱サイズ: {selectedBoxType?.name || boxSize}</div>
             <div className="mb-1">のし: {needsNoshi ? "あり" : "なし"}</div>
-            <div className="mb-1">袋: {needsBag ? "あり" : "なし"}</div>
+            <div className="mb-1">袋: {selected.label}</div>
             <hr className="my-2 border-gray-300" />
             <div className="mb-1 font-bold text-lg">合計金額: {totalPrice.toLocaleString()}円</div>
           </div>

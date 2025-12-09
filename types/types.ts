@@ -98,3 +98,23 @@ export interface NoshiInfo {
   upperText: string // 上書き（例：御祝、御供、内祝など）
   lowerText: string // 下書き（贈り主の名前）
 }
+
+export type Product = {
+  id: string
+  name: string
+  qty: number
+  price: number
+  image: string
+}
+
+
+// '@/types/types.ts' など共通ファイル
+export type BagOption = 'none' | 'a' | 'b' | 'c' | 'd'
+
+export const BAG_OPTIONS: { key: BagOption; label: string; price: number }[] = [
+  { key: 'none', label: 'なし', price: 0 },
+  { key: 'a',    label: 'ミニ',    price: 11 },
+  { key: 'b',    label: '小',    price: 11 },
+  { key: 'c',    label: '大',    price: 22 },
+  { key: 'd',    label: '底広',    price: 22 },
+]
