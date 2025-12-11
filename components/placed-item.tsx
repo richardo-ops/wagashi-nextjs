@@ -29,6 +29,7 @@ export default function PlacedItemComponent({
   const prevPositionRef = useRef({ x: item.x, y: item.y })
   const elementRef = useRef<HTMLDivElement>(null)
   const lastTapRef = useRef<number | null>(null)
+  const isDoubleTappedRef = useRef(false)
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     const now = Date.now()
@@ -36,6 +37,7 @@ export default function PlacedItemComponent({
     if (!touch) return
 
     if (lastTapRef.current && now - lastTapRef.current < 300) {
+      isDoubleTappedRef.current = true
       const fakeEvent = {
         preventDefault: () => {},
         clientX: touch.clientX,
@@ -44,11 +46,22 @@ export default function PlacedItemComponent({
 
       onContextMenu(fakeEvent)
       lastTapRef.current = null
+
+      // フラグをクリア（onDoubleClickの発火を防ぐため）
+      setTimeout(() => {
+        isDoubleTappedRef.current = false
+      }, 0)
     } else {
       lastTapRef.current = now
       setTimeout(() => {
         lastTapRef.current = null
       }, 350)
+    }
+  }
+
+  const handleDoubleClickWithCheck = () => {
+    if (!isDoubleTappedRef.current && item.type === "sweet" && onDoubleClick) {
+      onDoubleClick(item)
     }
   }
 
@@ -247,7 +260,7 @@ export default function PlacedItemComponent({
       }}
       onContextMenu={onContextMenu}
       onTouchEnd={handleTouchEnd}
-      onDoubleClick={() => item.type === "sweet" && onDoubleClick && onDoubleClick(item)}
+      onDoubleClick={handleDoubleClickWithCheck}
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
