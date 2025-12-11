@@ -49,12 +49,26 @@ export default function SweetItemComponent({ item }: SweetItemProps) {
     canDrag: item.inStock, // 在庫切れの場合はドラッグを許可しない
   }))
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+  }
+
+  const handlekpointerDown = (e: React.PointerEvent) => {
+    // タッチ操作やペン操作の場合、デフォルトの動作を防止
+    if (e.pointerType !== "mouse") {
+      e.preventDefault()
+    }
+  }
+
   return (
     <div
       ref={(node) => {
         elementRef.current = node
         drag(node)
       }}
+      onContextMenu={handleContextMenu}
+      onPointerDown={handlekpointerDown}
+      draggable={false}
       data-testid={`sweet-item-${item.id}`}
       className={`bg-white border border-[var(--color-indigo-light)] rounded-sm p-1.5 sm:p-2 ${
         item.inStock ? "cursor-move" : "cursor-not-allowed opacity-60"

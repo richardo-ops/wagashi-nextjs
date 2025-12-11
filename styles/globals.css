@@ -296,3 +296,25 @@ body {
     page-break-inside: avoid;
   }
 }
+
+
+/* === Drag&Touch 抑止ユーティリティ === */
+
+/* 商品カード（ドラッグ対象）に付与する */
+.draggable-sweet {
+  /* ブラウザのタッチジェスチャ（パン/ズーム/ダブルタップ拡大等）を抑止 */
+  touch-action: none;
+
+  /* テキスト選択の抑止（iOS Safari を含む） */
+  -webkit-user-select: none;
+  user-select: none;
+
+  /* iOS の長押し時のコンテキストメニュー（電話番号/リンクなど）を抑止 */
+  -webkit-touch-callout: none;
+
+  /* 見た目上のカーソル */
+  cursor: grab;
+}
+.draggable-sweet:active {
+  cursor: grabbing;
+}
