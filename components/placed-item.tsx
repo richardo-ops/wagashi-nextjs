@@ -37,9 +37,13 @@ export default function PlacedItemComponent({
     if (!touch) return
 
     if (lastTapRef.current && now - lastTapRef.current < 300) {
+      e.preventDefault()
+      e.stopPropagation()
+      
       isDoubleTappedRef.current = true
       const fakeEvent = {
         preventDefault: () => {},
+        stopPropagation: () => {},
         clientX: touch.clientX,
         clientY: touch.clientY,
       } as unknown as React.MouseEvent
