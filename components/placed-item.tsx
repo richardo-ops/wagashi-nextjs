@@ -28,6 +28,29 @@ export default function PlacedItemComponent({
   const [isAnimating, setIsAnimating] = useState(isNew)
   const prevPositionRef = useRef({ x: item.x, y: item.y })
   const elementRef = useRef<HTMLDivElement>(null)
+  const lastTapRef = useRef<number | null>(null)
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const now = Date.now()
+    const touch = e.changedTouches && e.changedTouches[0]
+    if (!touch) return
+
+    if (lastTapRef.current && now - lastTapRef.current < 300) {
+      const fakeEvent = {
+        preventDefault: () => {},
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+      } as unknown as React.MouseEvent
+
+      onContextMenu(fakeEvent)
+      lastTapRef.current = null
+    } else {
+      lastTapRef.current = now
+      setTimeout(() => {
+        lastTapRef.current = null
+      }, 350)
+    }
+  }
 
   // 新しいアイテムの場合、マウント時にアニメーションを適用
   useEffect(() => {
@@ -156,6 +179,7 @@ export default function PlacedItemComponent({
             height: 4, // 仕切りの太さ
           }}
           onContextMenu={onContextMenu}
+          onTouchEnd={handleTouchEnd}
           tabIndex={0}
           onKeyDown={handleKeyDown}
         >
@@ -187,6 +211,7 @@ export default function PlacedItemComponent({
             height: item.height * cellSize,
           }}
           onContextMenu={onContextMenu}
+          onTouchEnd={handleTouchEnd}
           tabIndex={0}
           onKeyDown={handleKeyDown}
         >
@@ -221,6 +246,7 @@ export default function PlacedItemComponent({
         zIndex: item.type === "divider" ? 25 : 20, // 仕切りのzIndexを和菓子よりも高く設定
       }}
       onContextMenu={onContextMenu}
+      onTouchEnd={handleTouchEnd}
       onDoubleClick={() => item.type === "sweet" && onDoubleClick && onDoubleClick(item)}
       tabIndex={0}
       onKeyDown={handleKeyDown}
