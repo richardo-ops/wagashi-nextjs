@@ -236,16 +236,37 @@ const getFilteredSweets = (category: string) => {
       </h2>
 
       {/* 検索入力（タブ間で検索語を共有） */}
-      <div className="relative mb-2">
-        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <input
-          type="text"
-          placeholder="和菓子を検索..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-sm text-sm"
-        />
-      </div>
+      <div className="relative mb-3">
+  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
+
+  <input
+    type="text"
+    placeholder="和菓子を検索..."
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    className="
+      w-full
+      pl-11 pr-10 py-3
+      text-base
+      border-2 border-gray-400
+      rounded-md
+      focus:outline-none
+      focus:border-gray-600
+      focus:ring-1 focus:ring-gray-400
+    "
+  />
+
+  {searchTerm && (
+    <button
+      type="button"
+      onClick={() => setSearchTerm("")}
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+    >
+      ×
+    </button>
+  )}
+</div>
+
 
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center">
