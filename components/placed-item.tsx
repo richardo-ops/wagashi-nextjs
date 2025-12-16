@@ -28,46 +28,6 @@ export default function PlacedItemComponent({
   const [isAnimating, setIsAnimating] = useState(isNew)
   const prevPositionRef = useRef({ x: item.x, y: item.y })
   const elementRef = useRef<HTMLDivElement>(null)
-  const lastTapRef = useRef<number | null>(null)
-  const isDoubleTappedRef = useRef(false)
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const now = Date.now()
-    const touch = e.changedTouches && e.changedTouches[0]
-    if (!touch) return
-
-    if (lastTapRef.current && now - lastTapRef.current < 300) {
-      e.preventDefault()
-      e.stopPropagation()
-      
-      isDoubleTappedRef.current = true
-      const fakeEvent = {
-        preventDefault: () => {},
-        stopPropagation: () => {},
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-      } as unknown as React.MouseEvent
-
-      onContextMenu(fakeEvent)
-      lastTapRef.current = null
-
-      // フラグをクリア（onDoubleClickの発火を防ぐため）
-      setTimeout(() => {
-        isDoubleTappedRef.current = false
-      }, 0)
-    } else {
-      lastTapRef.current = now
-      setTimeout(() => {
-        lastTapRef.current = null
-      }, 350)
-    }
-  }
-
-  const handleDoubleClickWithCheck = () => {
-    if (!isDoubleTappedRef.current && item.type === "sweet" && onDoubleClick) {
-      onDoubleClick(item)
-    }
-  }
 
   // 新しいアイテムの場合、マウント時にアニメーションを適用
   useEffect(() => {
@@ -196,7 +156,6 @@ export default function PlacedItemComponent({
             height: 4, // 仕切りの太さ
           }}
           onContextMenu={onContextMenu}
-          onTouchEnd={handleTouchEnd}
           tabIndex={0}
           onKeyDown={handleKeyDown}
         >
@@ -228,7 +187,6 @@ export default function PlacedItemComponent({
             height: item.height * cellSize,
           }}
           onContextMenu={onContextMenu}
-          onTouchEnd={handleTouchEnd}
           tabIndex={0}
           onKeyDown={handleKeyDown}
         >
@@ -263,8 +221,7 @@ export default function PlacedItemComponent({
         zIndex: item.type === "divider" ? 25 : 20, // 仕切りのzIndexを和菓子よりも高く設定
       }}
       onContextMenu={onContextMenu}
-      onTouchEnd={handleTouchEnd}
-      onDoubleClick={handleDoubleClickWithCheck}
+      onDoubleClick={() => item.type === "sweet" && onDoubleClick && onDoubleClick(item)}
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
