@@ -1286,6 +1286,99 @@ export default function BoxArea({
             />
           ))}
         </div>
+        {/* MX1–MX8 vertical dividers when showing MX9 (45x22) */}
+        {boxSize === "45x22" && (
+          <>
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${22 * 10 * cellSize}px`,
+                top: 0,
+                bottom: 0,
+                width: "0px",
+                borderLeft: "4px solid var(--color-indigo)",
+                zIndex: 20,
+              }}
+            />
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${25.5 * 10 * cellSize}px`,
+                top: 0,
+                bottom: 0,
+                width: "0px",
+                borderLeft: "4px solid var(--color-indigo)",
+                zIndex: 20,
+              }}
+            />
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${28.5 * 10 * cellSize}px`,
+                top: 0,
+                bottom: 0,
+                width: "0px",
+                borderLeft: "4px solid var(--color-indigo)",
+                zIndex: 20,
+              }}
+            />
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${32.5 * 10 * cellSize}px`,
+                top: 0,
+                bottom: 0,
+                width: "0px",
+                borderLeft: "4px solid var(--color-indigo)",
+                zIndex: 20,
+              }}
+            />
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${35 * 10 * cellSize}px`,
+                top: 0,
+                bottom: 0,
+                width: "0px",
+                borderLeft: "4px solid var(--color-indigo)",
+                zIndex: 20,
+              }}
+            />
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${37.5 * 10 * cellSize}px`,
+                top: 0,
+                bottom: 0,
+                width: "0px",
+                borderLeft: "4px solid var(--color-indigo)",
+                zIndex: 20,
+              }}
+            />
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${39 * 10 * cellSize}px`,
+                top: 0,
+                bottom: 0,
+                width: "0px",
+                borderLeft: "4px solid var(--color-indigo)",
+                zIndex: 20,
+              }}
+            />
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${42 * 10 * cellSize}px`,
+                top: 0,
+                bottom: 0,
+                width: "0px",
+                borderLeft: "4px solid var(--color-indigo)",
+                zIndex: 20,
+              }}
+            />
+          </>
+        )}
 
         {/* 配置プレビュー */}
         {previewPosition.visible && (

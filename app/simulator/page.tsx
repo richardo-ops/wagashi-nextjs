@@ -31,7 +31,7 @@ export default function WagashiSimulator() {
     refetch: refetchMaintenanceStatus 
   } = useMaintenanceMode()
 
-  const [boxSize, setBoxSize] = useState<BoxSize>("22x22")
+  const [boxSize, setBoxSize] = useState<BoxSize>("45x22")
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([])
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -110,15 +110,22 @@ export default function WagashiSimulator() {
       const response = await fetch("/api/box-types")
       if (response.ok) {
         const boxTypes = await response.json()
-        // 現在のboxSizeに対応する箱タイプを探す
-        const currentBoxType = boxTypes.find((bt: BoxType) => bt.size === boxSize)
-        if (currentBoxType) {
-          setSelectedBoxType(currentBoxType)
-        } else if (boxTypes.length > 0) {
-          // 対応する箱タイプがない場合は最初の箱タイプを選択
-          const firstBoxType = boxTypes[0]
-          setSelectedBoxType(firstBoxType)
-          setBoxSize(firstBoxType.size)
+        // 優先: MX9 (最大箱, 45x22) をデフォルトで選択する
+        const preferredBoxType = boxTypes.find((bt: BoxType) => bt.size === '45x22' || bt.name === 'MX9')
+        if (preferredBoxType) {
+          setSelectedBoxType(preferredBoxType)
+          setBoxSize(preferredBoxType.size)
+        } else {
+          // 次に現在の boxSize に合致するものを探す
+          const currentBoxType = boxTypes.find((bt: BoxType) => bt.size === boxSize)
+          if (currentBoxType) {
+            setSelectedBoxType(currentBoxType)
+          } else if (boxTypes.length > 0) {
+            // 最後に一覧の先頭をフォールバックとして選択
+            const firstBoxType = boxTypes[0]
+            setSelectedBoxType(firstBoxType)
+            setBoxSize(firstBoxType.size)
+          }
         }
       }
     } catch (error) {
