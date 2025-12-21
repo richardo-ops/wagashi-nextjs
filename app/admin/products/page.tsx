@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
-import { Plus, Edit, Trash2, Upload, Search, Image as ImageIcon, X } from 'lucide-react'
+import { Plus, Edit, Trash2, Upload, Search, Image as ImageIcon, X, Store } from 'lucide-react'
 
 interface Category {
   id: string
@@ -252,6 +252,11 @@ export default function ProductsPage() {
     setEditingProduct(null)
     setShowForm(false)
     setError('')
+  }
+
+  const getTotalStock = (p: Product) => {
+    if (!p.stocks || p.stocks.length === 0) return 0
+    return p.stocks.reduce((sum, s) => sum + (s.quantity ?? 0), 0)
   }
 
   // フィルタリングされた商品を取得
@@ -809,8 +814,8 @@ export default function ProductsPage() {
                                 {product.allergyInfo && (
                                   <span>アレルギー: {product.allergyInfo}</span>
                                 )}
-                                {product.stocks && (
-                                  <span>在庫: {stock.quantity}個</span>
+                                {product.stocks && product.stocks.length > 0 && (
+                                  <span>在庫: {getTotalStock(product)}個</span>
                                 )}
                               </div>
                               {(product.ingredients || product.nutritionInfo || product.shelfLife || product.storageMethod) && (
@@ -891,8 +896,8 @@ export default function ProductsPage() {
                                   {product.allergyInfo && (
                                     <span>アレルギー: {product.allergyInfo}</span>
                                   )}
-                                  {product.stock && (
-                                    <span>在庫: {product.stock.quantity}個</span>
+                                  {product.stocks && product.stocks.length > 0 && (
+                                    <span>在庫: {getTotalStock(product)}個</span>
                                   )}
                                 </div>
                                 {(product.ingredients || product.nutritionInfo || product.shelfLife || product.storageMethod) && (
