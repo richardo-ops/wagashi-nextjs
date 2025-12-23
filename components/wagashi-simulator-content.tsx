@@ -20,6 +20,40 @@ import { useState, useEffect } from "react"
 //追加
 import { useRouter } from "next/navigation"
 
+// Box type definitions (size in cm and price)
+const BOX_TYPE_DEFS = [
+  { size: 22, sizeStr: "22x22", name: "MX1", price: 220 },
+  { size: 25.5, sizeStr: "25.5x22", name: "MX2", price: 220 },
+  { size: 28.5, sizeStr: "28.5x22", name: "MX3", price: 275 },
+  { size: 32.5, sizeStr: "32.5x22", name: "MX4", price: 275 },
+  { size: 35, sizeStr: "35x22", name: "MX5", price: 330 },
+  { size: 37.5, sizeStr: "37.5x22", name: "MX6", price: 330 },
+  { size: 39, sizeStr: "39x22", name: "MX7", price: 330 },
+  { size: 42, sizeStr: "42x22", name: "MX8", price: 385 },
+  { size: 45, sizeStr: "45x22", name: "MX9", price: 385 },
+]
+
+function getBoxDefForCm(cm: number) {
+  return (
+    BOX_TYPE_DEFS.find(def => cm <= def.size) ||
+    BOX_TYPE_DEFS[BOX_TYPE_DEFS.length - 1]
+  )
+}
+
+function getMaxPlacedCm(items: any[]) {
+  return Math.max(
+    ...items
+      .filter(item => item.type === "sweet")
+      .map(item => (item.x + item.width) / 10), // mm → cm
+    0
+  )
+}
+
+function getAutoSelectedBox(items: any[]) {
+  const maxCm = getMaxPlacedCm(items)
+  return getBoxDefForCm(maxCm)
+}
+
 interface WagashiSimulatorContentProps {
   boxSize: BoxSize
   setBoxSize: React.Dispatch<React.SetStateAction<BoxSize>>
@@ -138,16 +172,41 @@ export default function WagashiSimulatorContent({
 
   // 合計金額を計算する関数
   const calculateTotalPrice = () => {
-    const subTotal = placedItems
-      .filter((item) => item.type === "sweet" && item.price)
-      .reduce((total, item) => total + (item.price || 0), 0)
-    
-    const boxPrice = selectedBoxType?.price || 0
-    const boxAmount = boxPrice
-    const sweetsTotal = subTotal*1.08
-    const total = Math.floor(sweetsTotal + boxAmount)
-    return total
+    // 和菓子は「固定価格」で合計
+    const sweetsSubTotal = placedItems
+      .filter(item => item.type === "sweet")
+      .reduce((sum, item) => sum + (item.price ?? 0), 0)
+
+    // 配置から箱を自動選択
+    const boxDef = getAutoSelectedBox(placedItems)
+    const boxPrice = boxDef.price ?? 0
+
+    // 税計算
+    const sweetsTotal = sweetsSubTotal * 1.08
+
+    return Math.floor(sweetsTotal + boxPrice)
   }
+
+  // 選択中の箱（表示用） — MX9 を選択している場合は配置位置に応じて実際の箱タイプを決定する
+  const getEffectiveBoxDef = () => {
+    if (!selectedBoxType) return null
+    // selectedBoxType.size may be like "45x22"
+    if (selectedBoxType.size === "45x22") {
+      // 動的判定: 配置済み和菓子の中心位置から最も大きい箱定義を選択
+      const sweets = placedItems.filter((it) => it.type === "sweet")
+      if (sweets.length === 0) return selectedBoxType
+      let maxIdx = 0
+      sweets.forEach((item) => {
+        const centerCm = (item.x + item.width / 2) / 10
+        const def = getBoxDefForCm(centerCm)
+        const idx = BOX_TYPE_DEFS.findIndex((d) => d.size === def.size)
+        if (idx > maxIdx) maxIdx = idx
+      })
+      return BOX_TYPE_DEFS[maxIdx]
+    }
+    return selectedBoxType
+  }
+  const effectiveBoxDef = getEffectiveBoxDef()
 
   // 詰め合わせの上限金額（円）を設定する状態
   const [priceLimitStr, setPriceLimitStr] = useState<string>("")
@@ -509,7 +568,7 @@ export default function WagashiSimulatorContent({
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">箱代:</span>
-                  <span>{selectedBoxType ? selectedBoxType.price.toLocaleString() : 0}円</span>
+                  <span>{effectiveBoxDef ? effectiveBoxDef.price.toLocaleString() : selectedBoxType ? selectedBoxType.price.toLocaleString() : 0}円</span>
                 </div>
                 <div className="border-t pt-2 flex justify-between">
                   <span className="text-lg font-medium text-[var(--color-indigo)]">合計:</span>
@@ -590,8 +649,8 @@ export default function WagashiSimulatorContent({
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">箱代 ({selectedBoxType ? selectedBoxType.name : boxSize}):</span>
-                    <span>{selectedBoxType ? selectedBoxType.price.toLocaleString() : 0}円</span>
+                    <span className="text-gray-600">箱代 ({effectiveBoxDef ? effectiveBoxDef.name : selectedBoxType ? selectedBoxType.name : boxSize}):</span>
+                    <span>{effectiveBoxDef ? effectiveBoxDef.price.toLocaleString() : selectedBoxType ? selectedBoxType.price.toLocaleString() : 0}円</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between">
                     <span className="text-lg font-medium text-[var(--color-indigo)]">合計:</span>
