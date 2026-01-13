@@ -76,6 +76,26 @@ export interface PlacedItem {
   linePosition?: number // グリッドライン上の位置
 }
 
+export interface temporaryPlacedItem {
+  id: string
+  itemId: string
+  type: "sweet" | "divider"
+  x: number
+  y: number
+  width: number
+  height: number
+  rotation: 0 | 90 | 180 | 270
+  isLocked: boolean
+  imageUrl: string
+  name: string
+  price?: number
+  orientation?: "horizontal" | "vertical"
+  isDeleting?: boolean
+  // 仕切り用の追加プロパティ
+  isGridLine?: boolean // グリッドライン上に配置されるかどうか
+  linePosition?: number // グリッドライン上の位置
+}
+
 // ドラッグアイテムの型
 export interface DragItem {
   type: string

@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { PlusCircle, Save, Upload, HelpCircle, Settings, Package, Cloud, Printer, Trash2, Eye } from "lucide-react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 //追加
 import { useRouter } from "next/navigation"
 
@@ -108,6 +108,9 @@ export default function WagashiSimulatorContent({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
   // 箱選択モーダルの状態
   const [isBoxSelectionOpen, setIsBoxSelectionOpen] = useState(false)
+
+  // temporary 用の配置 state（BoxArea と分離するため）
+  const [temporaryPlacedItems, setTemporaryPlacedItems] = useState<temporaryPlacedItem[]>([])
 
   //追加： Next.js のルーター
   const router = useRouter()
@@ -249,6 +252,25 @@ export default function WagashiSimulatorContent({
       }, {})
   )
 
+  // 配置済みアイテム間の重なりがあるかをチェック
+  const hasOverlap = useMemo(() => {
+    const sweets = placedItems.filter((it) => it.type === 'sweet')
+    for (let i = 0; i < sweets.length; i++) {
+      for (let j = i + 1; j < sweets.length; j++) {
+        const a = sweets[i]
+        const b = sweets[j]
+        const aRight = a.x + a.width
+        const aBottom = a.y + a.height
+        const bRight = b.x + b.width
+        const bBottom = b.y + b.height
+        if (!(aRight <= b.x || a.x >= bRight || aBottom <= b.y || a.y >= bBottom)) {
+          return true
+        }
+      }
+    }
+    return false
+  }, [placedItems])
+
   return (
     <TooltipProvider>
       <div className="min-h-screen washi-bg">
@@ -368,8 +390,9 @@ export default function WagashiSimulatorContent({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-white hover:bg-[var(--color-indigo-light)] px-2"
+                    className={`text-white hover:bg-[var(--color-indigo-light)] px-2 ${hasOverlap ? 'opacity-60 cursor-not-allowed' : ''}`}
                     onClick={() => {
+                      if (hasOverlap) return
                       // 配置済みアイテムとボックスサイズを SessionStorage に保存
                       sessionStorage.setItem("placedItems", JSON.stringify(placedItems))
                       sessionStorage.setItem("boxSize", boxSize)
@@ -381,6 +404,8 @@ export default function WagashiSimulatorContent({
                       sessionStorage.setItem("selectedBag", JSON.stringify(selectedBag))
                       router.push('/confirm')
                     }}
+                    disabled={hasOverlap}
+                    title={hasOverlap ? '商品が重なっています：確認できません' : undefined}
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
@@ -579,8 +604,9 @@ export default function WagashiSimulatorContent({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-[var(--color-indigo)] hover:bg-[var(--color-indigo-light)] ml-2"
+                      className={`text-[var(--color-indigo)] hover:bg-[var(--color-indigo-light)] ml-2 ${hasOverlap ? 'opacity-60 cursor-not-allowed' : ''}`}
                       onClick={() => {
+                        if (hasOverlap) return
                         sessionStorage.setItem("placedItems", JSON.stringify(placedItems))
                         sessionStorage.setItem("boxSize", boxSize)
                         sessionStorage.setItem("selectedBoxType", JSON.stringify(selectedBoxType))
@@ -590,6 +616,8 @@ export default function WagashiSimulatorContent({
                         sessionStorage.setItem("selectedBag", JSON.stringify(selectedBag))
                         router.push('/confirm')
                       }}
+                      disabled={hasOverlap}
+                      title={hasOverlap ? '商品が重なっています：確認できません' : undefined}
                     >
                       <Eye className="h-5 w-5" />
                     </Button>
@@ -661,8 +689,9 @@ export default function WagashiSimulatorContent({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="font-bold px-4 py-1 rounded bg-[var(--color-indigo-light)] border border-[var(--color-indigo)] text-white hover:bg-[var(--color-indigo)] hover:text-white transition-colors text-base shadow"
+                      className={`font-bold px-4 py-1 rounded bg-[var(--color-indigo-light)] border border-[var(--color-indigo)] text-white transition-colors text-base shadow ${hasOverlap ? 'opacity-60 cursor-not-allowed hover:bg-[var(--color-indigo-light)]' : 'hover:bg-[var(--color-indigo)] hover:text-white'}`}
                       onClick={() => {
+                        if (hasOverlap) return
                         sessionStorage.setItem("placedItems", JSON.stringify(placedItems))
                         sessionStorage.setItem("boxSize", boxSize)
                         sessionStorage.setItem("selectedBoxType", JSON.stringify(selectedBoxType))
@@ -672,6 +701,8 @@ export default function WagashiSimulatorContent({
                         sessionStorage.setItem("selectedBag", JSON.stringify(selectedBag))
                         router.push('/confirm')
                       }}
+                      disabled={hasOverlap}
+                      title={hasOverlap ? '商品が重なっています：確認できません' : undefined}
                     >
                       確認
                     </Button>

@@ -591,11 +591,15 @@ export default function BoxArea({
             }
           }
 
-          // placedItem の場合は移動処理
+          // placedItem の場合は移動処理（既存アイテムなら移動、別ソースからのドラッグならコピーして追加）
           if ("type" in item && item.type === "placedItem") {
-            setPlacedItems((prev) =>
-              prev.map((placedItem) => (placedItem.id === item.id ? { ...placedItem, x, y } : placedItem)),
-            )
+            
+              setPlacedItems((prev) =>
+                prev.map((placedItem) => (placedItem.id === item.id ? { ...placedItem, x, y } : placedItem)),
+              )
+              
+
+            
             setPreviewPosition((prev) => ({ ...prev, visible: false }))
             return
           }
@@ -634,20 +638,24 @@ export default function BoxArea({
         }
 
         // 通常のアイテム（和菓子）の場合
-        // placedItem の場合は移動処理
+        // placedItem の場合は移動処理（既存アイテムなら移動、別ソースからのドラッグならコピーして追加）
         if ("type" in item && item.type === "placedItem") {
-          // ドラッグ開始時の幅と高さを使用（回転後の値）
-          const itemWidth = "width" in item ? item.width : 1
-          const itemHeight = "height" in item ? item.height : 1
+          
+            // ドラッグ開始時の幅と高さを使用（回転後の値）
+            const itemWidth = "width" in item ? item.width : 1
+            const itemHeight = "height" in item ? item.height : 1
 
-          // 配置可能かチェック（回転も考慮）
-          if (!checkValidPlacement(x, y, itemWidth, itemHeight, item.id)) {
-            return
-          }
+            // 配置可能かチェック（回転も考慮）
+            if (!checkValidPlacement(x, y, itemWidth, itemHeight, item.id)) {
+              return
+            }
 
-          setPlacedItems((prev) =>
-            prev.map((placedItem) => (placedItem.id === item.id ? { ...placedItem, x, y } : placedItem)),
-          )
+            setPlacedItems((prev) =>
+              prev.map((placedItem) => (placedItem.id === item.id ? { ...placedItem, x, y } : placedItem)),
+            )
+            
+
+          
           setPreviewPosition((prev) => ({ ...prev, visible: false }))
           return
         }
@@ -862,34 +870,8 @@ export default function BoxArea({
       return false
     }
 
-    // 他のアイテムとの重複チェック
-    const isOverlapping = placedItems.some((placedItem) => {
-      // 自分自身との重複はチェックしない
-      if (excludeId && placedItem.id === excludeId) {
-        return false
-      }
-
-      // グリッドライン上の仕切りはここではチェックしない
-      if (placedItem.type === "divider" && placedItem.isGridLine) {
-        return false
-      }
-
-      // 通常のアイテム同士の重複チェック（仕切り以外）
-      if (placedItem.type !== "divider") {
-        const itemRight = placedItem.x + placedItem.width
-        const itemBottom = placedItem.y + placedItem.height
-        const newItemRight = x + width
-        const newItemBottom = y + height
-
-        return !(itemRight <= x || placedItem.x >= newItemRight || itemBottom <= y || placedItem.y >= newItemBottom)
-      }
-
-      return false
-    })
-
-    if (isOverlapping) {
-      return false
-    }
+    // NOTE: 他の和菓子同士の重なりはここでは制限しない（重なっても配置できるようにする）
+    // 仕切り（グリッドライン）との交差チェックは下で行う
 
     // グリッドライン上の仕切りとの交差チェック
     const gridLineDividers = placedItems.filter((item) => item.type === "divider" && item.isGridLine)
@@ -1154,40 +1136,8 @@ export default function BoxArea({
             return item
           }
 
-          // 他のアイテムとの衝突をチェック
-          const wouldCollide = placedItems.some((otherItem) => {
-            // 自分自身とは衝突判定しない
-            if (otherItem.id === id) return false
-
-
-
-            // グリッドライン上の仕切りは無視
-            if (otherItem.type === "divider" && otherItem.isGridLine) return false
-
-            // 通常の衝突判定
-            const itemRight = item.x + newWidth
-            const itemBottom = item.y + newHeight
-            const otherRight = otherItem.x + otherItem.width
-            const otherBottom = otherItem.y + otherItem.height
-
-            return !(
-              itemRight <= otherItem.x ||
-              item.x >= otherRight ||
-              itemBottom <= otherItem.y ||
-              item.y >= otherBottom
-            )
-          })
-
-          if (wouldCollide) {
-            // エラーモーダルを表示
-            setErrorModal({
-              visible: true,
-              title: "回転エラー",
-              message: "回転すると他の商品と重なってしまいます。位置を調整してから回転してください。",
-            })
-            // 元の状態を維持
-            return item
-          }
+          // NOTE: 回転による他アイテムとの重なりは許可する（重なっても配置できるようにする）
+          // グリッド外にはみ出さないチェックは継続して行う
 
           // 全てのチェックをパスしたら回転を適用（幅と高さを入れ替え）
           return {
@@ -1247,9 +1197,6 @@ export default function BoxArea({
         </h2>
         <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
           <span>サイズ: {boxSize} ({boxSize.split('x')[0]}cm×{boxSize.split('x')[1]}cm)</span>
-          <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-            グリッド: {gridSize.width}×{gridSize.height}マス (1マス = 1mm)
-          </span>
         </div>
       </div>
       <div className="flex justify-center overflow-visible w-full">
