@@ -158,7 +158,9 @@ export default function ConfirmScreen({
     return sum + p.price * qty
   }, 0)
 
-  const total = productTotal*1.08 + boxPrice + bagPrice
+  const Total = Math.floor(productTotal*1.08)
+
+  const total = Total + boxPrice + bagPrice
   const tabs = ["商品", "アレルゲン", "のし", "袋"]
 
   if (isComplete) {

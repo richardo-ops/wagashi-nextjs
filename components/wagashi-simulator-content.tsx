@@ -109,8 +109,8 @@ export default function WagashiSimulatorContent({
   // 箱選択モーダルの状態
   const [isBoxSelectionOpen, setIsBoxSelectionOpen] = useState(false)
 
-  // temporary 用の配置 state（BoxArea と分離するため）
-  const [temporaryPlacedItems, setTemporaryPlacedItems] = useState<temporaryPlacedItem[]>([])
+  // temporary 用の配置 state（BoxArea と分離するため） 使用しないためコメントアウト
+  //const [temporaryPlacedItems, setTemporaryPlacedItems] = useState<temporaryPlacedItem[]>([])
 
   //追加： Next.js のルーター
   const router = useRouter()
