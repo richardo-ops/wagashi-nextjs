@@ -11,55 +11,55 @@ async function main() {
   const boxTypeData = [
     {
       size: '22x22',
-      name: 'MX1',
+      name: 'B1',
       price: 220,
       description: ''
     },
     {
       size: '25.5x22',
-      name: 'MX2',
+      name: 'B2',
       price: 220,
       description: ''
     },
     {
       size: '28.5x22',
-      name: 'MX3',
+      name: 'B3',
       price: 275,
       description: ''
     },
     {
       size: '32.5x22',
-      name: 'MX4',
+      name: 'B4',
       price: 275,
       description: ''
     },
     {
       size: '35x22',
-      name: 'MX5',
+      name: 'B5',
       price: 330,
       description: ''
     },
     {
       size: '37.5x22',
-      name: 'MX6',
+      name: 'B6',
       price: 330,
       description: ''
     },
     {
       size: '39x22',
-      name: 'MX7',
+      name: 'B7',
       price: 330,
       description: ''
     },
     {
       size: '42x22',
-      name: 'MX8',
+      name: 'B8',
       price: 385,
       description: ''
     },
     {
       size: '45x22',
-      name: 'MX9',
+      name: 'B9',
       price: 385,
       description: ''
     }

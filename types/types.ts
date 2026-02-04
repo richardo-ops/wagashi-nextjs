@@ -136,5 +136,5 @@ export const BAG_OPTIONS: { key: BagOption; label: string; price: number }[] = [
   { key: 'a',    label: 'ミニ',    price: 11 },
   { key: 'b',    label: '小',    price: 11 },
   { key: 'c',    label: '大',    price: 22 },
-  { key: 'd',    label: '底広',    price: 22 },
+  { key: 'd',    label: '特大',    price: 22 },
 ]

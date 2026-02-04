@@ -22,15 +22,15 @@ import { useRouter } from "next/navigation"
 
 // Box type definitions (size in cm and price)
 const BOX_TYPE_DEFS = [
-  { size: 22, sizeStr: "22x22", name: "MX1", price: 220 },
-  { size: 25.5, sizeStr: "25.5x22", name: "MX2", price: 220 },
-  { size: 28.5, sizeStr: "28.5x22", name: "MX3", price: 275 },
-  { size: 32.5, sizeStr: "32.5x22", name: "MX4", price: 275 },
-  { size: 35, sizeStr: "35x22", name: "MX5", price: 330 },
-  { size: 37.5, sizeStr: "37.5x22", name: "MX6", price: 330 },
-  { size: 39, sizeStr: "39x22", name: "MX7", price: 330 },
-  { size: 42, sizeStr: "42x22", name: "MX8", price: 385 },
-  { size: 45, sizeStr: "45x22", name: "MX9", price: 385 },
+  { size: 22, sizeStr: "22x22", name: "B1", price: 220 },
+  { size: 25.5, sizeStr: "25.5x22", name: "B2", price: 220 },
+  { size: 28.5, sizeStr: "28.5x22", name: "B3", price: 275 },
+  { size: 32.5, sizeStr: "32.5x22", name: "B4", price: 275 },
+  { size: 35, sizeStr: "35x22", name: "B5", price: 330 },
+  { size: 37.5, sizeStr: "37.5x22", name: "B6", price: 330 },
+  { size: 39, sizeStr: "39x22", name: "B7", price: 330 },
+  { size: 42, sizeStr: "42x22", name: "B8", price: 385 },
+  { size: 45, sizeStr: "45x22", name: "B9", price: 385 },
 ]
 
 function getBoxDefForCm(cm: number) {
@@ -108,9 +108,6 @@ export default function WagashiSimulatorContent({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
   // 箱選択モーダルの状態
   const [isBoxSelectionOpen, setIsBoxSelectionOpen] = useState(false)
-
-  // temporary 用の配置 state（BoxArea と分離するため）
-  const [temporaryPlacedItems, setTemporaryPlacedItems] = useState<temporaryPlacedItem[]>([])
 
   //追加： Next.js のルーター
   const router = useRouter()
@@ -190,17 +187,17 @@ export default function WagashiSimulatorContent({
     return Math.floor(sweetsTotal + boxPrice)
   }
 
-  // 選択中の箱（表示用） — MX9 を選択している場合は配置位置に応じて実際の箱タイプを決定する
+  // 選択中の箱（表示用） — B9 を選択している場合は配置位置に応じて実際の箱タイプを決定する
   const getEffectiveBoxDef = () => {
     if (!selectedBoxType) return null
     // selectedBoxType.size may be like "45x22"
     if (selectedBoxType.size === "45x22") {
-      // 動的判定: 配置済み和菓子の中心位置から最も大きい箱定義を選択
+      // 動的判定: 配置済み和菓子の右端位置から最も大きい箱定義を選択
       const sweets = placedItems.filter((it) => it.type === "sweet")
       if (sweets.length === 0) return selectedBoxType
       let maxIdx = 0
       sweets.forEach((item) => {
-        const centerCm = (item.x + item.width / 2) / 10
+        const centerCm = (item.x + item.width) / 10
         const def = getBoxDefForCm(centerCm)
         const idx = BOX_TYPE_DEFS.findIndex((d) => d.size === def.size)
         if (idx > maxIdx) maxIdx = idx
