@@ -5,7 +5,6 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import type { InfoDisplaySettings } from "@/components/info-settings-modal"
 import { DndProvider } from "react-dnd"
-// Use touch backend to allow immediate touch drag (single-tap) on mobile
 import { TouchBackend } from "react-dnd-touch-backend"
 import type { BoxSize, PlacedItem, BoxType } from "@/types/types"
 import saveAs from "file-saver"

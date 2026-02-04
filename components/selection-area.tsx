@@ -188,6 +188,9 @@ const getFilteredSweets = (category: string) => {
   const term = (searchTerm ?? "").trim().toLowerCase()
 
   return sweets.filter((s) => {
+    // 在庫が0個の商品は表示しない
+    if ((s.stockQuantity ?? 0) <= 0) return false
+
     // 「全て」ならカテゴリ判定をスキップ（= 全商品が対象）
     const matchCategory = category === "全て" || s.category === category
     if (!matchCategory) return false
