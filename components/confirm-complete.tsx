@@ -49,8 +49,6 @@ export default function ConfirmComplete({
     const qty = Number.isFinite(p.qty) ? p.qty : 1 // qty未設定の保険
     return sum + p.price * qty
   }, 0)
-
-  const Total = Math.floor(productTotal*1.08)
   // 箱代（selectedBoxType.priceがあれば加算）
   const boxPrice = selectedBoxType?.price || 0;
   // 袋代
@@ -58,7 +56,7 @@ export default function ConfirmComplete({
   const bagPrice = selected.price
 
   // 合計金額
-  const totalPrice = Total + boxPrice + bagPrice;
+  const totalPrice = productTotal*1.08 + boxPrice + bagPrice;
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-sm p-8 flex flex-col items-center">
