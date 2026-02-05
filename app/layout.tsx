@@ -28,8 +28,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "和菓子詰め合わせシミュレーター",
-  description: "和菓子の詰め合わせをシミュレーションできるWebアプリケーション",
+  title: "つめつめ",
+  description: "詰め合わせをシミュレーションできるWebアプリケーション",
     generator: 'v0.dev'
 }
 
