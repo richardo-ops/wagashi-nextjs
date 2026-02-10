@@ -77,7 +77,7 @@ export default function StoreSelectionPage() {
           <div className="flex justify-center mb-4">
             <Image
               src="/images/icon.png"
-              alt="和菓子詰め合わせシミュレーター"
+              alt="つめつめ"
               width={300}
               height={100}
               priority

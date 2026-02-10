@@ -5,7 +5,8 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import type { InfoDisplaySettings } from "@/components/info-settings-modal"
 import { DndProvider } from "react-dnd"
-import { TouchBackend } from "react-dnd-touch-backend"
+//import { TouchBackend } from "react-dnd-touch-backend"
+import { HTML5Backend } from "react-dnd-html5-backend"
 import type { BoxSize, PlacedItem, BoxType } from "@/types/types"
 import saveAs from "file-saver"
 
@@ -244,7 +245,7 @@ export default function WagashiSimulator() {
 
   // 通常のシミュレーター画面を表示（読み込み中も含む）
   return (
-    <DndProvider backend={TouchBackend} options={{ enableMouseEvents: true, delayTouchStart: 0 }}>
+    <DndProvider backend={HTML5Backend} options={{ enableMouseEvents: true, delayTouchStart: 0 }}>
       <div className="relative">
           {/* 店舗情報とナビゲーション */}
           <div className="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 flex items-center justify-between">
