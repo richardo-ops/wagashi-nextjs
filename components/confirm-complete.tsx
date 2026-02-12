@@ -56,7 +56,7 @@ export default function ConfirmComplete({
   const bagPrice = selected.price
 
   // 合計金額
-  const totalPrice = productTotal*1.08 + boxPrice + bagPrice;
+  const totalPrice = Math.floor(productTotal*1.08 + boxPrice + bagPrice);
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-sm p-8 flex flex-col items-center">
