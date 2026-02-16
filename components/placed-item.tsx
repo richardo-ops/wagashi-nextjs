@@ -1,3 +1,5 @@
+//配置された商品のコンポーネント(しきりに関しては削除が必要)
+
 "use client"
 
 import type React from "react"
@@ -130,6 +132,7 @@ export default function PlacedItemComponent({
     e.preventDefault()
   }
 
+  /* しきりに関する項目のため削除予定
   // グリッドライン上の仕切りの場合の特別なスタイル
   if (item.type === "divider" && item.isGridLine) {
     const dividerStyle = {
@@ -201,6 +204,7 @@ export default function PlacedItemComponent({
       )
     }
   }
+  */
 
   // 通常のアイテム（和菓子または従来の仕切り）のreturn部分で、transformOriginを修正
   return (

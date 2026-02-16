@@ -870,34 +870,8 @@ export default function BoxArea({
       return false
     }
 
-    // 他のアイテムとの重複チェック
-    const isOverlapping = placedItems.some((placedItem) => {
-      // 自分自身との重複はチェックしない
-      if (excludeId && placedItem.id === excludeId) {
-        return false
-      }
-
-      // グリッドライン上の仕切りはここではチェックしない
-      if (placedItem.type === "divider" && placedItem.isGridLine) {
-        return false
-      }
-
-      // 通常のアイテム同士の重複チェック（仕切り以外）
-      if (placedItem.type !== "divider") {
-        const itemRight = placedItem.x + placedItem.width
-        const itemBottom = placedItem.y + placedItem.height
-        const newItemRight = x + width
-        const newItemBottom = y + height
-
-        return !(itemRight <= x || placedItem.x >= newItemRight || itemBottom <= y || placedItem.y >= newItemBottom)
-      }
-
-      return false
-    })
-
-    if (isOverlapping) {
-      return false
-    }
+    // NOTE: 他の和菓子同士の重なりはここでは制限しない（重なっても配置できるようにする）
+    // 仕切り（グリッドライン）との交差チェックは下で行う
 
     // グリッドライン上の仕切りとの交差チェック
     const gridLineDividers = placedItems.filter((item) => item.type === "divider" && item.isGridLine)
@@ -1162,40 +1136,8 @@ export default function BoxArea({
             return item
           }
 
-          // 他のアイテムとの衝突をチェック
-          const wouldCollide = placedItems.some((otherItem) => {
-            // 自分自身とは衝突判定しない
-            if (otherItem.id === id) return false
-
-
-
-            // グリッドライン上の仕切りは無視
-            if (otherItem.type === "divider" && otherItem.isGridLine) return false
-
-            // 通常の衝突判定
-            const itemRight = item.x + newWidth
-            const itemBottom = item.y + newHeight
-            const otherRight = otherItem.x + otherItem.width
-            const otherBottom = otherItem.y + otherItem.height
-
-            return !(
-              itemRight <= otherItem.x ||
-              item.x >= otherRight ||
-              itemBottom <= otherItem.y ||
-              item.y >= otherBottom
-            )
-          })
-
-          if (wouldCollide) {
-            // エラーモーダルを表示
-            setErrorModal({
-              visible: true,
-              title: "回転エラー",
-              message: "回転すると他の商品と重なってしまいます。位置を調整してから回転してください。",
-            })
-            // 元の状態を維持
-            return item
-          }
+          // NOTE: 回転による他アイテムとの重なりは許可する（重なっても配置できるようにする）
+          // グリッド外にはみ出さないチェックは継続して行う
 
           // 全てのチェックをパスしたら回転を適用（幅と高さを入れ替え）
           return {
@@ -1477,7 +1419,8 @@ export default function BoxArea({
       {infoModalItem && (
         <div ref={productInfoRef}>
           <Dialog open={true} onOpenChange={(open) => !open && setInfoModalItem(null)}>
-            <DialogContent className="sm:max-w-md bg-[var(--color-beige)] max-h-[80vh] overflow-y-auto !bg-opacity-100 border border-[var(--color-indigo-light)]">
+            {/* ダイアログのサイズ調整 */}
+            <DialogContent className="sm:max-w-lg bg-[var(--color-beige)] max-h-[80vh] overflow-y-auto !bg-opacity-100 border border-[var(--color-indigo-light)]">
               <DialogHeader>
                 <DialogTitle className="text-[var(--color-indigo)] border-b border-[var(--color-gray-light)] pb-2">
                   {infoSettings.showName ? infoModalItem.name : "商品情報"}
@@ -1485,8 +1428,8 @@ export default function BoxArea({
               </DialogHeader>
               <div className="flex gap-4">
                 {infoSettings.showImage && (
-                  <div
-                    className="w-24 h-24 relative overflow-hidden rounded-sm border border-[var(--color-indigo-light)] cursor-zoom-in hover:opacity-90 transition-opacity group bg-white"
+                  <div /*商品詳細の大きさ変更可能*/ 
+                    className="w-32 h-32 relative overflow-hidden rounded-sm border border-[var(--color-indigo-light)] cursor-zoom-in hover:opacity-90 transition-opacity group bg-white"
                     onClick={() => handleShowImageViewer(infoModalItem)}
                   >
                     <img

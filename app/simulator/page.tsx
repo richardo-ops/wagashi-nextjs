@@ -1,3 +1,5 @@
+//シミュレータ画面のメインコンポーネント
+
 "use client"
 
 import type React from "react"

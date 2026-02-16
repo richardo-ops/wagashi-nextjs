@@ -1,3 +1,5 @@
+//配置された商品にダブルクリック時のコンテキストメニューについてのコンポーネント
+
 "use client"
 
 import type React from "react"
