@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { compareJapaneseStrings } from "@/lib/utils"
 import type { SweetItem } from "@/types/types"
 
 export async function GET(request: Request) {
@@ -26,8 +27,16 @@ export async function GET(request: Request) {
       },
       where: {
         isActive: true
-      },
-      orderBy: { createdAt: 'desc' }
+      }
+    })
+
+    products.sort((left, right) => {
+      const nameComparison = compareJapaneseStrings(left.name, right.name)
+      if (nameComparison !== 0) {
+        return nameComparison
+      }
+
+      return compareJapaneseStrings(left.id, right.id)
     })
 
     // SweetItemの形式に変換

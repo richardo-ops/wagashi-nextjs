@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { compareJapaneseStrings } from '@/lib/utils'
 
 // 商品一覧取得
 export async function GET() {
@@ -18,8 +19,16 @@ export async function GET() {
       include: {
         category: true,
         stocks: true
-      },
-      orderBy: { createdAt: 'desc' }
+      }
+    })
+
+    products.sort((left, right) => {
+      const nameComparison = compareJapaneseStrings(left.name, right.name)
+      if (nameComparison !== 0) {
+        return nameComparison
+      }
+
+      return compareJapaneseStrings(left.id, right.id)
     })
 
     console.log(`商品データ取得成功: ${products.length}件`)
