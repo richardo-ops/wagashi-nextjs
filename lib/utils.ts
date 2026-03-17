@@ -1,6 +1,8 @@
+//ユティリティ関数
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
+// 日本語の文字列を正しく比較するためのCollatorを作成
 const japaneseCollator = new Intl.Collator("ja", {
   numeric: true,
   sensitivity: "base"
