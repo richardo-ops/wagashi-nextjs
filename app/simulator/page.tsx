@@ -6,7 +6,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import type { InfoDisplaySettings } from "@/components/info-settings-modal"
-import { DndContext, MouseSensor, TouchSensor, rectIntersection, useSensor, useSensors } from "@dnd-kit/core"
+import { DndContext, PointerSensor, pointerWithin, useSensor, useSensors } from "@dnd-kit/core"
 import type { BoxSize, PlacedItem, BoxType } from "@/types/types"
 import saveAs from "file-saver"
 
@@ -49,15 +49,9 @@ export default function WagashiSimulator() {
 
   // DnDセンサーの設定
   const sensors = useSensors(
-    useSensor(MouseSensor, {
+    useSensor(PointerSensor, {
       activationConstraint: {
         distance: 4,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 120,
-        tolerance: 8,
       },
     })
   )
@@ -290,7 +284,7 @@ export default function WagashiSimulator() {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={rectIntersection}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStartDebug}
       onDragMove={handleDragMoveDebug}
       onDragEnd={handleDragEndDebug}

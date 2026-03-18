@@ -1015,11 +1015,12 @@ export default function BoxArea({
       .reduce((total, item) => total + (item.price || 0), 0)
   }
 
-  const handleContextMenu = (position: { clientX: number; clientY: number }, item: PlacedItem) => {
+  const handleContextMenu = (e: React.MouseEvent, item: PlacedItem) => {
+    e.preventDefault()
     setContextMenu({
       visible: true,
-      x: position.clientX,
-      y: position.clientY,
+      x: e.clientX,
+      y: e.clientY,
       item,
     })
   }
@@ -1326,7 +1327,7 @@ export default function BoxArea({
           <PlacedItemComponent
             key={item.id}
             item={item}
-            onContextMenu={(position) => handleContextMenu(position, item)}
+            onContextMenu={(e) => handleContextMenu(e, item)}
             setPlacedItems={setPlacedItems}
             isNew={newItemIds.has(item.id)}
             cellSize={cellSize}

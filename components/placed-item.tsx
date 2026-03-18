@@ -10,7 +10,7 @@ import { Lock } from "lucide-react"
 
 interface PlacedItemProps {
   item: PlacedItem
-  onContextMenu: (position: { clientX: number; clientY: number }) => void
+  onContextMenu: (e: React.MouseEvent) => void
   setPlacedItems: React.Dispatch<React.SetStateAction<PlacedItem[]>>
   isNew?: boolean
   cellSize: number
@@ -29,7 +29,6 @@ export default function PlacedItemComponent({
 }: PlacedItemProps) {
   const [isAnimating, setIsAnimating] = useState(isNew)
   const prevPositionRef = useRef({ x: item.x, y: item.y })
-  const twoFingerTapStartRef = useRef<{ clientX: number; clientY: number } | null>(null)
 
   // 新しいアイテムの場合、マウント時にアニメーションを適用
   useEffect(() => {
@@ -112,30 +111,7 @@ export default function PlacedItemComponent({
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
-    onContextMenu({ clientX: e.clientX, clientY: e.clientY })
-  }
-
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length !== 2) {
-      twoFingerTapStartRef.current = null
-      return
-    }
-
-    const firstTouch = e.touches[0]
-    const secondTouch = e.touches[1]
-    const clientX = (firstTouch.clientX + secondTouch.clientX) / 2
-    const clientY = (firstTouch.clientY + secondTouch.clientY) / 2
-    twoFingerTapStartRef.current = { clientX, clientY }
-  }
-
-  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!twoFingerTapStartRef.current) return
-    if (e.touches.length > 0) return
-
-    e.preventDefault()
-    e.stopPropagation()
-    onContextMenu(twoFingerTapStartRef.current)
-    twoFingerTapStartRef.current = null
+    onContextMenu(e)
   }
 
   /* しきりに関する項目のため削除予定
@@ -231,8 +207,6 @@ export default function PlacedItemComponent({
         touchAction: "none",
       }}
       onContextMenu={handleContextMenu}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
       onDoubleClick={() => item.type === "sweet" && onDoubleClick && onDoubleClick(item)}
       tabIndex={0}
       onKeyDown={handleKeyDown}
