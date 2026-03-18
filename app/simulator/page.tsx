@@ -45,6 +45,8 @@ export default function WagashiSimulator() {
   
   // カスタマーコード保存のローディング状態
   const [isSavingCustomerCode, setIsSavingCustomerCode] = useState(false)
+
+  // DnDセンサーの設定
   const sensors = useSensors(
     useSensor(MouseSensor),
     useSensor(TouchSensor, {

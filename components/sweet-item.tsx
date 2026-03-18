@@ -58,7 +58,13 @@ export default function SweetItemComponent({ item }: SweetItemProps) {
           } w-12 h-12 sm:w-16 sm:h-16`}
         >
           {/* 画像自体はobject-fitでコンテナ内に収める */}
-          <img src={item.imageUrl || "/placeholder.svg"} alt={item.name} className="w-full h-full object-contain" />
+          <img
+            src={item.imageUrl || "/placeholder.svg"}
+            alt={item.name}
+            className="w-full h-full object-contain"
+            draggable={false}
+            style={{ pointerEvents: "none" }}
+          />
 
           {!item.inStock && (
             <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">

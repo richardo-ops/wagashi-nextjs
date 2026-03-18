@@ -29,7 +29,6 @@ export default function PlacedItemComponent({
 }: PlacedItemProps) {
   const [isAnimating, setIsAnimating] = useState(isNew)
   const prevPositionRef = useRef({ x: item.x, y: item.y })
-  const elementRef = useRef<HTMLDivElement>(null)
 
   // 新しいアイテムの場合、マウント時にアニメーションを適用
   useEffect(() => {
@@ -110,6 +109,11 @@ export default function PlacedItemComponent({
     e.preventDefault()
   }
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    onContextMenu(e)
+  }
+
   /* しきりに関する項目のため削除予定
   // グリッドライン上の仕切りの場合の特別なスタイル
   if (item.type === "divider" && item.isGridLine) {
@@ -187,10 +191,7 @@ export default function PlacedItemComponent({
   // 通常のアイテム（和菓子または従来の仕切り）のreturn部分で、transformOriginを修正
   return (
     <div
-      ref={(node) => {
-        elementRef.current = node
-        setNodeRef(node)
-      }}
+      ref={setNodeRef}
       {...listeners}
       {...attributes}
       data-testid="placed-item"
@@ -205,7 +206,7 @@ export default function PlacedItemComponent({
         zIndex: item.type === "divider" ? 25 : 20, // 仕切りのzIndexを和菓子よりも高く設定
         touchAction: "none",
       }}
-      onContextMenu={onContextMenu}
+      onContextMenu={handleContextMenu}
       onDoubleClick={() => item.type === "sweet" && onDoubleClick && onDoubleClick(item)}
       tabIndex={0}
       onKeyDown={handleKeyDown}
@@ -216,7 +217,9 @@ export default function PlacedItemComponent({
             src={item.imageUrl || "/placeholder.svg"}
             alt={item.name}
             className="w-full h-full"
+            draggable={false}
             style={{
+              pointerEvents: "none",
               objectFit: "contain",
               transform: item.rotation ? `rotate(${item.rotation}deg)` : "none",
               transformOrigin: "center center",
