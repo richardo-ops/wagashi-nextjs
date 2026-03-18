@@ -108,9 +108,20 @@ export default function WagashiSimulatorContent({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
   // 箱選択モーダルの状態
   const [isBoxSelectionOpen, setIsBoxSelectionOpen] = useState(false)
+  const [isDesktopLayout, setIsDesktopLayout] = useState(false)
 
   //追加： Next.js のルーター
   const router = useRouter()
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)")
+    const updateLayout = () => setIsDesktopLayout(mediaQuery.matches)
+
+    updateLayout()
+    mediaQuery.addEventListener("change", updateLayout)
+
+    return () => mediaQuery.removeEventListener("change", updateLayout)
+  }, [])
 
   // 要素の参照
   const selectionAreaRef = null
@@ -643,6 +654,7 @@ export default function WagashiSimulatorContent({
                 contextMenuRef={contextMenuRef as React.RefObject<HTMLDivElement>}
                 productInfoRef={productInfoRef as React.RefObject<HTMLDivElement>}
                 selectedStoreId={selectedStoreId}
+                dndEnabled={!isDesktopLayout}
               />
             </div>
           </div>
@@ -658,6 +670,7 @@ export default function WagashiSimulatorContent({
                 contextMenuRef={contextMenuRef as React.RefObject<HTMLDivElement>}
                 productInfoRef={productInfoRef as React.RefObject<HTMLDivElement>}
                 selectedStoreId={selectedStoreId}
+                dndEnabled={isDesktopLayout}
               />
             </div>
             <div className="flex flex-col min-h-[calc(100vh-140px)] w-80 flex-shrink-0">

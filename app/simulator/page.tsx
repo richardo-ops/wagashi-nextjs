@@ -6,7 +6,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import type { InfoDisplaySettings } from "@/components/info-settings-modal"
-import { DndContext, MouseSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core"
+import { DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 import type { BoxSize, PlacedItem, BoxType } from "@/types/types"
 import saveAs from "file-saver"
 
@@ -46,11 +46,9 @@ export default function WagashiSimulator() {
   // カスタマーコード保存のローディング状態
   const [isSavingCustomerCode, setIsSavingCustomerCode] = useState(false)
   const sensors = useSensors(
-    useSensor(MouseSensor),
-    useSensor(TouchSensor, {
+    useSensor(PointerSensor, {
       activationConstraint: {
-        delay: 120,
-        tolerance: 8,
+        distance: 6,
       },
     })
   )

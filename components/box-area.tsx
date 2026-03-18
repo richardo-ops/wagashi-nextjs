@@ -27,6 +27,7 @@ interface BoxAreaProps {
   contextMenuRef?: React.RefObject<HTMLDivElement>
   productInfoRef?: React.RefObject<HTMLDivElement>
   selectedStoreId: string
+  dndEnabled?: boolean
 }
 
 // BoxArea 関数
@@ -38,6 +39,7 @@ export default function BoxArea({
   contextMenuRef,
   productInfoRef,
   selectedStoreId,
+  dndEnabled = true,
 }: BoxAreaProps) {
   // 既存のステート定義は省略...
   const [gridSize, setGridSize] = useState({ width: 10, height: 10 })
@@ -227,7 +229,7 @@ export default function BoxArea({
   }, [placedItems, setPlacedItems, selectedStoreId])
 
 
-  const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({ id: "box-area" })
+  const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({ id: "box-area", disabled: !dndEnabled })
   const [canDropState, setCanDropState] = useState(false)
 
   const getDragPosition = useCallback((event: any) => {
@@ -256,6 +258,8 @@ export default function BoxArea({
 
   useDndMonitor({
     onDragMove: (event) => {
+      if (!dndEnabled) return
+
       if (event.over?.id !== "box-area") {
         setCanDropState(false)
         setPreviewPosition((prev) => ({ ...prev, visible: false }))
@@ -450,6 +454,8 @@ export default function BoxArea({
       }
     },
     onDragEnd: (event) => {
+      if (!dndEnabled) return
+
       const item = event.active.data.current as any
       const position = getDragPosition(event)
 
@@ -636,6 +642,8 @@ export default function BoxArea({
       setPreviewPosition((prev) => ({ ...prev, visible: false }))
     },
     onDragCancel: () => {
+      if (!dndEnabled) return
+
       setCanDropState(false)
       setPreviewPosition((prev) => ({ ...prev, visible: false }))
     },
