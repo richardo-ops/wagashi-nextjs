@@ -30,7 +30,13 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "つめつめ",
   description: "詰め合わせをシミュレーションできるWebアプリケーション",
-    generator: 'v0.dev'
+  generator: 'v0.dev',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 }
 
 export default function RootLayout({

@@ -25,18 +25,30 @@ export default function SweetItemComponent({ item }: SweetItemProps) {
     e.preventDefault()
   }
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // iOS Safari debug logging
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[sweet-item] Touch started on item:', item.id, 'inStock:', item.inStock, 'listeners:', listeners)
+    }
+  }
+
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
       onContextMenu={handleContextMenu}
+      onTouchStart={handleTouchStart}
       draggable={false}
       data-testid={`sweet-item-${item.id}`}
       className={`bg-white border border-[var(--color-indigo-light)] rounded-sm p-1.5 sm:p-2 ${
         item.inStock ? "cursor-move" : "cursor-not-allowed opacity-60"
       } ${isDragging ? "opacity-50" : "opacity-100"} hover:shadow-md transition-shadow duration-200 relative overflow-hidden group`}
-      style={{ touchAction: "none" }}
+      style={{ 
+        touchAction: "none",
+        WebkitTouchCallout: "none",
+        WebkitUserSelect: "none",
+      }}
     >
       <div className="flex flex-col items-center">
         {/* レスポンシブな画像コンテナ */}

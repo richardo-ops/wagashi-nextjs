@@ -259,6 +259,10 @@ export default function BoxArea({
   useDndMonitor({
     onDragMove: (event) => {
       if (!dndEnabled) return
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[box-area] onDragMove', { activeId: event.active.id, overId: event.over?.id, dndEnabled })
+      }
 
       if (event.over?.id !== "box-area") {
         setCanDropState(false)
@@ -455,6 +459,10 @@ export default function BoxArea({
     },
     onDragEnd: (event) => {
       if (!dndEnabled) return
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[box-area] onDragEnd', { activeId: event.active.id, overId: event.over?.id, dndEnabled })
+      }
 
       const item = event.active.data.current as any
       const position = getDragPosition(event)
