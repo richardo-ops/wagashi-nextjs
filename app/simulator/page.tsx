@@ -6,7 +6,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import type { InfoDisplaySettings } from "@/components/info-settings-modal"
-import { DndContext, MouseSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core"
+import { DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 import type { BoxSize, PlacedItem, BoxType } from "@/types/types"
 import saveAs from "file-saver"
 
@@ -49,11 +49,9 @@ export default function WagashiSimulator() {
 
   // DnDセンサーの設定
   const sensors = useSensors(
-    useSensor(MouseSensor),
-    useSensor(TouchSensor, {
+    useSensor(PointerSensor, {
       activationConstraint: {
-        delay: 0,
-        tolerance: 0,
+        distance: 4,
       },
     })
   )
