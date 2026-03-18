@@ -14,7 +14,8 @@ interface PlacedItemProps {
   setPlacedItems: React.Dispatch<React.SetStateAction<PlacedItem[]>>
   isNew?: boolean
   cellSize: number
-  onDoubleClick?: (item: PlacedItem) => void
+  //ダブルクリック時の動作、引数はアイテムとイベントオブジェクト
+  onDoubleClick?: (item: PlacedItem, e: React.MouseEvent) => void
   checkValidPlacement?: (x: number, y: number, width: number, height: number, excludeId?: string) => boolean
 }
 
@@ -109,9 +110,13 @@ export default function PlacedItemComponent({
     e.preventDefault()
   }
 
+  //右クリック時の動作(コンテキストメニュー表示)
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
-    onContextMenu(e)
+    
+    if(item.type === "sweet" && onDoubleClick) {
+      onDoubleClick(item, e)
+    }
   }
 
   /* しきりに関する項目のため削除予定
@@ -207,7 +212,11 @@ export default function PlacedItemComponent({
         touchAction: "none",
       }}
       onContextMenu={handleContextMenu}
-      onDoubleClick={() => item.type === "sweet" && onDoubleClick && onDoubleClick(item)}
+      //ダブルクリックでコンテキストメニュー表示
+      onDoubleClick={(e) => {
+        e.preventDefault()
+        onContextMenu(e)
+      }}
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
