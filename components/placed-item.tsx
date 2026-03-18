@@ -10,7 +10,7 @@ import { Lock } from "lucide-react"
 
 interface PlacedItemProps {
   item: PlacedItem
-  onContextMenu: (position: { clientX: number; clientY: number }) => void
+  onContextMenu: (e: React.MouseEvent) => void
   setPlacedItems: React.Dispatch<React.SetStateAction<PlacedItem[]>>
   isNew?: boolean
   cellSize: number
@@ -29,9 +29,6 @@ export default function PlacedItemComponent({
 }: PlacedItemProps) {
   const [isAnimating, setIsAnimating] = useState(isNew)
   const prevPositionRef = useRef({ x: item.x, y: item.y })
-  const lastTapTimeRef = useRef(0)
-  const lastTapPositionRef = useRef<{ x: number; y: number } | null>(null)
-  const touchDoubleTapTriggeredRef = useRef(false)
 
   // 新しいアイテムの場合、マウント時にアニメーションを適用
   useEffect(() => {
@@ -114,43 +111,7 @@ export default function PlacedItemComponent({
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
-    onContextMenu({ clientX: e.clientX, clientY: e.clientY })
-  }
-
-  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.changedTouches.length !== 1) return
-
-    const touch = e.changedTouches[0]
-    const now = Date.now()
-    const delta = now - lastTapTimeRef.current
-    const lastPos = lastTapPositionRef.current
-
-    const movedTooMuch =
-      !!lastPos &&
-      Math.hypot(touch.clientX - lastPos.x, touch.clientY - lastPos.y) > 24
-
-    if (delta > 0 && delta < 320 && !movedTooMuch) {
-      e.preventDefault()
-      e.stopPropagation()
-      touchDoubleTapTriggeredRef.current = true
-      onContextMenu({ clientX: touch.clientX, clientY: touch.clientY })
-      window.setTimeout(() => {
-        touchDoubleTapTriggeredRef.current = false
-      }, 350)
-      lastTapTimeRef.current = 0
-      lastTapPositionRef.current = null
-      return
-    }
-
-    lastTapTimeRef.current = now
-    lastTapPositionRef.current = { x: touch.clientX, y: touch.clientY }
-  }
-
-  const handleDoubleClick = () => {
-    if (touchDoubleTapTriggeredRef.current) return
-    if (item.type === "sweet" && onDoubleClick) {
-      onDoubleClick(item)
-    }
+    onContextMenu(e)
   }
 
   /* しきりに関する項目のため削除予定
@@ -246,8 +207,7 @@ export default function PlacedItemComponent({
         touchAction: "none",
       }}
       onContextMenu={handleContextMenu}
-      onTouchEnd={handleTouchEnd}
-      onDoubleClick={handleDoubleClick}
+      onDoubleClick={() => item.type === "sweet" && onDoubleClick && onDoubleClick(item)}
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
