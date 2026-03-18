@@ -256,6 +256,12 @@ export default function BoxArea({
     }
   }, [])
 
+  const isInsideBoxArea = useCallback((position: { boxRect: DOMRect; left: number; top: number } | null) => {
+    if (!position) return false
+    const { boxRect, left, top } = position
+    return left >= boxRect.left && left <= boxRect.right && top >= boxRect.top && top <= boxRect.bottom
+  }, [])
+
   useDndMonitor({
     onDragMove: (event) => {
       if (!dndEnabled) return
@@ -264,13 +270,15 @@ export default function BoxArea({
         console.log('[box-area] onDragMove', { activeId: event.active.id, overId: event.over?.id, dndEnabled })
       }
 
-      if (event.over?.id !== "box-area") {
+      const position = getDragPosition(event)
+      const isOverBox = event.over?.id === "box-area" || isInsideBoxArea(position)
+
+      if (!isOverBox) {
         setCanDropState(false)
         setPreviewPosition((prev) => ({ ...prev, visible: false }))
         return
       }
 
-      const position = getDragPosition(event)
       const item = event.active.data.current as any
       if (!position || !item) return
 
@@ -466,8 +474,9 @@ export default function BoxArea({
 
       const item = event.active.data.current as any
       const position = getDragPosition(event)
+      const isOverBox = event.over?.id === "box-area" || isInsideBoxArea(position)
 
-      if (!item || !position || event.over?.id !== "box-area") {
+      if (!item || !position || !isOverBox) {
         setCanDropState(false)
         setPreviewPosition((prev) => ({ ...prev, visible: false }))
         return
