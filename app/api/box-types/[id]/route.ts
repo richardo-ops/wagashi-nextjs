@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
 import { prisma } from "@/lib/prisma"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
 // 箱タイプ詳細取得
 export async function GET(
@@ -7,6 +9,11 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
+    }
+
     const boxType = await prisma.boxType.findUnique({
       where: {
         id: params.id,
@@ -36,15 +43,35 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
+    }
+
     const { name, price, description, isActive } = await request.json()
+
+    if (!name || price === undefined || price === null) {
+      return NextResponse.json(
+        { error: "名前と価格は必須です" },
+        { status: 400 }
+      )
+    }
+
+    const numericPrice = parseInt(String(price), 10)
+    if (Number.isNaN(numericPrice) || numericPrice < 0) {
+      return NextResponse.json(
+        { error: "価格は0以上の整数で入力してください" },
+        { status: 400 }
+      )
+    }
 
     const boxType = await prisma.boxType.update({
       where: {
         id: params.id,
       },
       data: {
-        name,
-        price: price !== undefined ? parseInt(price) : undefined,
+        name: String(name).trim(),
+        price: numericPrice,
         description,
         isActive,
       },
@@ -66,6 +93,11 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
+    }
+
     await prisma.boxType.delete({
       where: {
         id: params.id,

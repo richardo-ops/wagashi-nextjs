@@ -14,6 +14,18 @@ import { Plus, Edit, Trash2, Package, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import type { BoxType, BoxSize } from "@/types/types"
 
+const boxSizeOptions: BoxSize[] = [
+  "22x22",
+  "25.5x22",
+  "28.5x22",
+  "32.5x22",
+  "35x22",
+  "37.5x22",
+  "39x22",
+  "42x22",
+  "45x22"
+]
+
 export default function BoxTypesPage() {
   const [boxTypes, setBoxTypes] = useState<BoxType[]>([])
   const [loading, setLoading] = useState(true)
@@ -162,12 +174,24 @@ export default function BoxTypesPage() {
 
   const getSizeLabel = (size: BoxSize) => {
     switch (size) {
-      case "10x10":
-        return "10×10cm"
-      case "15x15":
-        return "15×15cm"
-      case "20x20":
-        return "20×20cm"
+      case "22x22":
+        return "22×22cm"
+      case "25.5x22":
+        return "25.5×22cm"
+      case "28.5x22":
+        return "28.5×22cm"
+      case "32.5x22":
+        return "32.5×22cm"
+      case "35x22":
+        return "35×22cm"
+      case "37.5x22":
+        return "37.5×22cm"
+      case "39x22":
+        return "39×22cm"
+      case "42x22":
+        return "42×22cm"
+      case "45x22":
+        return "45×22cm"
       default:
         return size
     }
@@ -211,9 +235,9 @@ export default function BoxTypesPage() {
                     <SelectValue placeholder="サイズを選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="10x10">10×10cm</SelectItem>
-                    <SelectItem value="15x15">15×15cm</SelectItem>
-                    <SelectItem value="20x20">20×20cm</SelectItem>
+                    {boxSizeOptions.map((size) => (
+                      <SelectItem key={size} value={size}>{getSizeLabel(size)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
