@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { useDraggable } from "@dnd-kit/core"
 import type { SweetItem } from "@/types/types"
 import { AlertCircle } from "lucide-react"
@@ -9,7 +10,7 @@ interface SweetItemProps {
 }
 
 export default function SweetItemComponent({ item }: SweetItemProps) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
     id: `sweet-${item.id}`,
     disabled: !item.inStock,
     data: {
@@ -25,12 +26,18 @@ export default function SweetItemComponent({ item }: SweetItemProps) {
     e.preventDefault()
   }
 
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = () => {
     // iOS Safari debug logging
     if (process.env.NODE_ENV === 'development') {
-      console.log('[sweet-item] Touch started on item:', item.id, 'inStock:', item.inStock, 'listeners:', listeners)
+      console.log('[sweet-item] touch start', { id: item.id, inStock: item.inStock })
     }
   }
+
+  useEffect(() => {
+    if (transform && process.env.NODE_ENV === "development") {
+      console.log(`[sweet-item] move: ${transform.x}, ${transform.y}`)
+    }
+  }, [transform])
 
   return (
     <div

@@ -238,6 +238,22 @@ export default function WagashiSimulator() {
     setInfoSettings(newSettings)
   }
 
+  const log = (message: string) => {
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[dnd-debug] ${message}`)
+    }
+  }
+
+  const handleDragStartDebug = () => {
+    log("drag start")
+    if (typeof window !== "undefined") {
+      const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0
+      if (isTouchDevice) {
+        window.alert("drag start")
+      }
+    }
+  }
+
   // 店舗が選択されていない場合は何も表示しない
   if (!selectedStoreId) {
     return null
@@ -256,7 +272,7 @@ export default function WagashiSimulator() {
 
   // 通常のシミュレーター画面を表示（読み込み中も含む）
   return (
-    <DndContext sensors={sensors}>
+    <DndContext sensors={sensors} onDragStart={handleDragStartDebug}>
       <div className="relative">
           {/* 店舗情報とナビゲーション */}
           <div className="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 flex items-center justify-between">
