@@ -46,16 +46,10 @@ export default function WagashiSimulator() {
   // カスタマーコード保存のローディング状態
   const [isSavingCustomerCode, setIsSavingCustomerCode] = useState(false)
   const sensors = useSensors(
+    useSensor(PointerSensor),
     useSensor(TouchSensor, {
       activationConstraint: {
         delay: 100,
-        tolerance: 5,
-      },
-    }),
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-        delay: 50,
         tolerance: 5,
       },
     })

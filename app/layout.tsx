@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter, Noto_Sans_JP, Noto_Serif_JP } from "next/font/google"
 import { Providers } from "@/components/providers"
 import "./globals.css"
@@ -31,12 +31,13 @@ export const metadata: Metadata = {
   title: "つめつめ",
   description: "詰め合わせをシミュレーションできるWebアプリケーション",
   generator: 'v0.dev',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 }
 
 export default function RootLayout({
