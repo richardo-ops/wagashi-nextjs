@@ -292,11 +292,9 @@ export default function WagashiSimulator() {
       onDragCancel={handleDragCancelDebug}
     >
       <div className="relative">
-          {process.env.NODE_ENV === "development" && (
-            <div className="fixed bottom-2 right-2 z-[9999] rounded bg-black/80 px-2 py-1 text-xs text-white">
-              DnD: {dndDebugMessage}
-            </div>
-          )}
+          <div className="fixed bottom-2 right-2 z-[9999] rounded bg-black/80 px-2 py-1 text-xs text-white">
+            DnD: {dndDebugMessage}
+          </div>
           {/* 店舗情報とナビゲーション */}
           <div className="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3">
