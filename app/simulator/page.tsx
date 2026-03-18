@@ -45,6 +45,7 @@ export default function WagashiSimulator() {
   
   // カスタマーコード保存のローディング状態
   const [isSavingCustomerCode, setIsSavingCustomerCode] = useState(false)
+  const [dndDebugMessage, setDndDebugMessage] = useState("idle")
 
   // DnDセンサーの設定
   const sensors = useSensors(
@@ -246,12 +247,23 @@ export default function WagashiSimulator() {
 
   const handleDragStartDebug = () => {
     log("drag start")
-    if (typeof window !== "undefined") {
-      const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0
-      if (isTouchDevice) {
-        window.alert("drag start")
-      }
-    }
+    setDndDebugMessage("drag start")
+  }
+
+  const handleDragMoveDebug = (event: any) => {
+    const overId = event.over?.id ? String(event.over.id) : "none"
+    setDndDebugMessage(`drag move (over: ${overId})`)
+  }
+
+  const handleDragEndDebug = (event: any) => {
+    const overId = event.over?.id ? String(event.over.id) : "none"
+    setDndDebugMessage(`drag end (over: ${overId})`)
+    log(`drag end over: ${overId}`)
+  }
+
+  const handleDragCancelDebug = () => {
+    setDndDebugMessage("drag cancel")
+    log("drag cancel")
   }
 
   // 店舗が選択されていない場合は何も表示しない
@@ -272,8 +284,19 @@ export default function WagashiSimulator() {
 
   // 通常のシミュレーター画面を表示（読み込み中も含む）
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStartDebug}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStartDebug}
+      onDragMove={handleDragMoveDebug}
+      onDragEnd={handleDragEndDebug}
+      onDragCancel={handleDragCancelDebug}
+    >
       <div className="relative">
+          {process.env.NODE_ENV === "development" && (
+            <div className="fixed bottom-2 right-2 z-[9999] rounded bg-black/80 px-2 py-1 text-xs text-white">
+              DnD: {dndDebugMessage}
+            </div>
+          )}
           {/* 店舗情報とナビゲーション */}
           <div className="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3">
