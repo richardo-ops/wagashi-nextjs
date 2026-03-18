@@ -1,8 +1,7 @@
 "use client"
 
-import { useDrag } from "react-dnd"
+import { useDraggable } from "@dnd-kit/core"
 import type { SweetItem } from "@/types/types"
-import { useRef } from "react"
 import { AlertCircle } from "lucide-react"
 
 interface SweetItemProps {
@@ -10,44 +9,17 @@ interface SweetItemProps {
 }
 
 export default function SweetItemComponent({ item }: SweetItemProps) {
-  const elementRef = useRef<HTMLDivElement>(null)
-
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: "sweet",
-    item: (monitor) => {
-      // 在庫切れの場合はドラッグを許可しない
-      if (!item.inStock) {
-        return null
-      }
-
-      // ドラッグ開始時の要素の位置を取得
-      const initialClientOffset = monitor.getInitialClientOffset()
-      const initialSourceClientOffset = monitor.getInitialSourceClientOffset()
-
-      // 要素内でのクリック位置（オフセット）を計算
-      let offsetX = 0
-      let offsetY = 0
-
-      if (initialClientOffset && initialSourceClientOffset) {
-        offsetX = initialClientOffset.x - initialSourceClientOffset.x
-        offsetY = initialClientOffset.y - initialSourceClientOffset.y
-      }
-
-      return {
-        id: item.id,
-        type: "sweet",
-        item,
-        width: item.width*10,//mmとcmの補完のため商品サイズを10倍
-        height: item.height*10,
-        offsetX,
-        offsetY,
-      }
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `sweet-${item.id}`,
+    disabled: !item.inStock,
+    data: {
+      id: item.id,
+      type: "sweet",
+      item,
+      width: item.width * 10,
+      height: item.height * 10,
     },
-    collect: (monitor) => ({
-      isDragging: !!monitor.isDragging(),
-    }),
-    canDrag: item.inStock, // 在庫切れの場合はドラッグを許可しない
-  }))
+  })
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -62,10 +34,9 @@ export default function SweetItemComponent({ item }: SweetItemProps) {
 
   return (
     <div
-      ref={(node) => {
-        elementRef.current = node
-        drag(node)
-      }}
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       onContextMenu={handleContextMenu}
       onPointerDown={handlekpointerDown}
       draggable={false}
@@ -73,6 +44,7 @@ export default function SweetItemComponent({ item }: SweetItemProps) {
       className={`bg-white border border-[var(--color-indigo-light)] rounded-sm p-1.5 sm:p-2 ${
         item.inStock ? "cursor-move" : "cursor-not-allowed opacity-60"
       } ${isDragging ? "opacity-50" : "opacity-100"} hover:shadow-md transition-shadow duration-200 relative overflow-hidden group`}
+      style={{ touchAction: "none" }}
     >
       <div className="flex flex-col items-center">
         {/* レスポンシブな画像コンテナ */}

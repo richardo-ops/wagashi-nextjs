@@ -1,57 +1,35 @@
 "use client"
 
-import { useDrag } from "react-dnd"
+import { useDraggable } from "@dnd-kit/core"
 import type { DividerItem } from "@/types/types"
-import { useRef } from "react"
 
 interface DividerItemProps {
   item: DividerItem
 }
 
 export default function DividerItemComponent({ item }: DividerItemProps) {
-  const elementRef = useRef<HTMLDivElement>(null)
-
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: "divider",
-    item: (monitor) => {
-      // ドラッグ開始時の要素の位置を取得
-      const initialClientOffset = monitor.getInitialClientOffset()
-      const initialSourceClientOffset = monitor.getInitialSourceClientOffset()
-
-      // 要素内でのクリック位置（オフセット）を計算
-      let offsetX = 0
-      let offsetY = 0
-
-      if (initialClientOffset && initialSourceClientOffset) {
-        offsetX = initialClientOffset.x - initialSourceClientOffset.x
-        offsetY = initialClientOffset.y - initialSourceClientOffset.y
-      }
-
-      return {
-        id: item.id,
-        type: "divider",
-        item,
-        width: item.orientation === "horizontal" ? item.length : 1,
-        height: item.orientation === "vertical" ? item.length : 1,
-        isGridLine: true, // グリッドライン上に配置されることを示す
-        offsetX,
-        offsetY,
-      }
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `divider-${item.id}`,
+    data: {
+      id: item.id,
+      type: "divider",
+      item,
+      width: item.orientation === "horizontal" ? item.length : 1,
+      height: item.orientation === "vertical" ? item.length : 1,
+      isGridLine: true,
+      orientation: item.orientation,
     },
-    collect: (monitor) => ({
-      isDragging: !!monitor.isDragging(),
-    }),
-  }))
+  })
 
   return (
     <div
-      ref={(node) => {
-        elementRef.current = node
-        drag(node)
-      }}
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       className={`bg-white border border-[var(--color-indigo-light)] rounded-sm p-1.5 sm:p-2 cursor-move ${
         isDragging ? "opacity-50" : "opacity-100"
       } hover:shadow-md transition-shadow duration-200 relative overflow-hidden group`}
+      style={{ touchAction: "none" }}
     >
       <div className="flex flex-col items-center">
         <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center">

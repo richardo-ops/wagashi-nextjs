@@ -6,9 +6,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import type { InfoDisplaySettings } from "@/components/info-settings-modal"
-import { DndProvider } from "react-dnd"
-//import { TouchBackend } from "react-dnd-touch-backend"
-import { HTML5Backend } from "react-dnd-html5-backend"
+import { DndContext, MouseSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core"
 import type { BoxSize, PlacedItem, BoxType } from "@/types/types"
 import saveAs from "file-saver"
 
@@ -47,6 +45,15 @@ export default function WagashiSimulator() {
   
   // カスタマーコード保存のローディング状態
   const [isSavingCustomerCode, setIsSavingCustomerCode] = useState(false)
+  const sensors = useSensors(
+    useSensor(MouseSensor),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 120,
+        tolerance: 8,
+      },
+    })
+  )
 
   // 商品情報表示設定の初期値
   const [infoSettings, setInfoSettings] = useState<InfoDisplaySettings>({
@@ -247,7 +254,7 @@ export default function WagashiSimulator() {
 
   // 通常のシミュレーター画面を表示（読み込み中も含む）
   return (
-    <DndProvider backend={HTML5Backend} options={{ enableMouseEvents: true, delayTouchStart: 0 }}>
+    <DndContext sensors={sensors}>
       <div className="relative">
           {/* 店舗情報とナビゲーション */}
           <div className="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 flex items-center justify-between">
@@ -322,6 +329,6 @@ export default function WagashiSimulator() {
             expiresAt={expiresAt}
           />
       </div>
-    </DndProvider>
+    </DndContext>
   )
 }

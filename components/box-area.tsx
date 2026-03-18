@@ -5,8 +5,8 @@ import type React from "react"
 // 既存のインポート
 import { useState, useRef, useEffect, useCallback } from "react"
 import { flushSync } from "react-dom"
-import { useDrop } from "react-dnd"
-import type { BoxSize, PlacedItem, DragItem, SweetItem } from "@/types/types"
+import { useDndMonitor, useDroppable } from "@dnd-kit/core"
+import type { BoxSize, PlacedItem, SweetItem } from "@/types/types"
 import PlacedItemComponent from "./placed-item"
 import ContextMenu from "./context-menu"
 import DividerResizeModal from "./divider-resize-modal"
@@ -227,110 +227,79 @@ export default function BoxArea({
   }, [placedItems, setPlacedItems, selectedStoreId])
 
 
+  const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({ id: "box-area" })
+  const [canDropState, setCanDropState] = useState(false)
 
-  const [{ isOver, canDrop }, drop] = useDrop(
-    () => ({
-      accept: ["sweet", "divider", "placedItem"],
-      hover: (
-        item:
-          | DragItem
-          | {
-            id: string
-            type: "placedItem"
-            width?: number
-            height?: number
-            isGridLine?: boolean
-            orientation?: string
-            offsetX?: number
-            offsetY?: number
-          },
-        monitor,
-      ) => {
-        const boxRect = boxRef.current?.getBoundingClientRect()
-        if (!boxRect) return
+  const getDragPosition = useCallback((event: any) => {
+    const boxRect = boxRef.current?.getBoundingClientRect()
+    const translated = event?.active?.rect?.current?.translated
+    const initial = event?.active?.rect?.current?.initial
+    const delta = event?.delta
 
-        const clientOffset = monitor.getClientOffset()
-        if (!clientOffset) return
+    const left = translated?.left ?? (typeof initial?.left === "number" && typeof delta?.x === "number"
+      ? initial.left + delta.x
+      : initial?.left)
+    const top = translated?.top ?? (typeof initial?.top === "number" && typeof delta?.y === "number"
+      ? initial.top + delta.y
+      : initial?.top)
 
-        // オフセットを取得（ドラッグ要素内でのクリック位置）
-        const offsetX = "offsetX" in item ? item.offsetX || 0 : 0
-        const offsetY = "offsetY" in item ? item.offsetY || 0 : 0
+    if (!boxRect || typeof left !== "number" || typeof top !== "number") {
+      return null
+    }
 
-        // ホバー位置の計算（オフセットを考慮）
-        let x = Math.floor((clientOffset.x - boxRect.left - offsetX) / cellSize)
-        let y = Math.floor((clientOffset.y - boxRect.top - offsetY) / cellSize)
+    return {
+      boxRect,
+      left,
+      top,
+    }
+  }, [])
 
-        // グリッド範囲内に収める
-        x = Math.max(0, x)
-        y = Math.max(0, y)
+  useDndMonitor({
+    onDragMove: (event) => {
+      if (event.over?.id !== "box-area") {
+        setCanDropState(false)
+        setPreviewPosition((prev) => ({ ...prev, visible: false }))
+        return
+      }
 
-        // グリッドライン上の仕切りの場合
-        if (
-          ("isGridLine" in item && item.isGridLine) ||
-          ("type" in item && item.type === "divider" && "isGridLine" in item && item.isGridLine)
-        ) {
-          // グリッドライン上の位置を計算
-          const orientation =
-            "item" in item && item.item && "orientation" in item.item
-              ? item.item.orientation
-              : "orientation" in item
-                ? (item.orientation as "horizontal" | "vertical")
-                : "horizontal"
+      const position = getDragPosition(event)
+      const item = event.active.data.current as any
+      if (!position || !item) return
 
-          if (orientation === "horizontal") {
-            // 水平仕切りの場合、行間に配置
-            y = Math.round((clientOffset.y - boxRect.top - offsetY) / cellSize)
+      const { boxRect, left, top } = position
+      let x = Math.floor((left - boxRect.left) / cellSize)
+      let y = Math.floor((top - boxRect.top) / cellSize)
 
-            // スナップ位置を計算
-            const snapPosition = findHorizontalSnapPosition(
-              x,
-              y,
-              item.width || 1,
-              "type" in item && item.type === "placedItem" ? item.id : undefined,
-            )
+      x = Math.max(0, x)
+      y = Math.max(0, y)
 
-            // スナップ位置が見つかった場合
-            if (snapPosition) {
-              y = snapPosition.y
+      if ((item.isGridLine) || (item.type === "divider" && item.isGridLine)) {
+        const orientation =
+          item.item && "orientation" in item.item
+            ? item.item.orientation
+            : item.orientation
+              ? (item.orientation as "horizontal" | "vertical")
+              : "horizontal"
 
-              // 配置可能かチェック
-              const isValidPlacement = checkValidGridLinePlacement(
-                x,
-                y,
-                item.width || 1,
-                "horizontal",
-                "type" in item && item.type === "placedItem" ? item.id : undefined,
-              )
+        if (orientation === "horizontal") {
+          y = Math.round((top - boxRect.top) / cellSize)
 
-              const isValidIntersection = checkDividerSweetIntersection(
-                x,
-                y,
-                "horizontal",
-                item.width || 1,
-                "type" in item && item.type === "placedItem" ? item.id : undefined,
-              )
+          const snapPosition = findHorizontalSnapPosition(
+            x,
+            y,
+            item.width || 1,
+            item.type === "placedItem" ? item.id : undefined,
+          )
 
-              setPreviewPosition({
-                x,
-                y,
-                width: item.width || 1,
-                height: 0, // 高さは実質0（線）
-                isValid: isValidPlacement && isValidIntersection,
-                visible: true,
-                isGridLine: true,
-                orientation: "horizontal",
-                isSnapped: true,
-              })
-              return
-            }
+          if (snapPosition) {
+            y = snapPosition.y
 
-            // 通常の配置可能性チェック
             const isValidPlacement = checkValidGridLinePlacement(
               x,
               y,
               item.width || 1,
               "horizontal",
-              "type" in item && item.type === "placedItem" ? item.id : undefined,
+              item.type === "placedItem" ? item.id : undefined,
             )
 
             const isValidIntersection = checkDividerSweetIntersection(
@@ -338,359 +307,268 @@ export default function BoxArea({
               y,
               "horizontal",
               item.width || 1,
-              "type" in item && item.type === "placedItem" ? item.id : undefined,
+              item.type === "placedItem" ? item.id : undefined,
             )
 
+            const isValid = isValidPlacement && isValidIntersection
+            setCanDropState(isValid)
             setPreviewPosition({
               x,
               y,
               width: item.width || 1,
-              height: 0, // 高さは実質0（線）
-              isValid: isValidPlacement && isValidIntersection,
+              height: 0,
+              isValid,
               visible: true,
               isGridLine: true,
               orientation: "horizontal",
-              isSnapped: false,
+              isSnapped: true,
             })
-          } else {
-            // 垂直仕切りの場合、列間に配置
-            x = Math.round((clientOffset.x - boxRect.left - offsetX) / cellSize)
-
-            // スナップ位置を計算
-            const snapPosition = findVerticalSnapPosition(
-              x,
-              y,
-              item.height || 1,
-              "type" in item && item.type === "placedItem" ? item.id : undefined,
-            )
-
-            // スナップ位置が見つかった場合
-            if (snapPosition) {
-              x = snapPosition.x
-
-              // 配置可能かチェック
-              const isValidPlacement = checkValidGridLinePlacement(
-                x,
-                y,
-                item.height || 1,
-                "vertical",
-                "type" in item && item.type === "placedItem" ? item.id : undefined,
-              )
-
-              const isValidIntersection = checkDividerSweetIntersection(
-                x,
-                y,
-                "vertical",
-                item.height || 1,
-                "type" in item && item.type === "placedItem" ? item.id : undefined,
-              )
-
-              setPreviewPosition({
-                x,
-                y,
-                width: 0, // 幅は実質0（線）
-                height: item.height || 1,
-                isValid: isValidPlacement && isValidIntersection,
-                visible: true,
-                isGridLine: true,
-                orientation: "vertical",
-                isSnapped: true,
-              })
-              return
-            }
-
-            // 通常の配置可能性チェック
-            const isValidPlacement = checkValidGridLinePlacement(
-              x,
-              y,
-              item.height || 1,
-              "vertical",
-              "type" in item && item.type === "placedItem" ? item.id : undefined,
-            )
-
-            const isValidIntersection = checkDividerSweetIntersection(
-              x,
-              y,
-              "vertical",
-              item.height || 1,
-              "type" in item && item.type === "placedItem" ? item.id : undefined,
-            )
-
-            setPreviewPosition({
-              x,
-              y,
-              width: 0, // 幅は実質0（線）
-              height: item.height || 1,
-              isValid: isValidPlacement && isValidIntersection,
-              visible: true,
-              isGridLine: true,
-              orientation: "vertical",
-              isSnapped: false,
-            })
-          }
-          return
-        }
-
-        // 通常のアイテム（和菓子または従来の仕切り）の場合
-        // placedItemの場合
-        if ("type" in item && item.type === "placedItem") {
-          // ドラッグ開始時の幅と高さを使用（回転後の値）
-          const itemWidth = "width" in item ? item.width : 1
-          const itemHeight = "height" in item ? item.height : 1
-
-          // 配置可能かチェック
-          const isValid = checkValidPlacement(x, y, itemWidth, itemHeight, item.id)
-
-          setPreviewPosition({
-            x,
-            y,
-            width: itemWidth,
-            height: itemHeight,
-            isValid,
-            visible: true,
-          })
-          return
-        }
-
-        // 新規アイテムの場合
-        if ("width" in item && "height" in item) {
-          // 配置可能かチェック
-          const isValid = checkValidPlacement(x, y, item.width, item.height)
-
-          setPreviewPosition({
-            x,
-            y,
-            width: item.width,
-            height: item.height,
-            isValid,
-            visible: true,
-          })
-        }
-      },
-      drop: (
-        item:
-          | DragItem
-          | {
-            id: string
-            type: "placedItem"
-            width?: number
-            height?: number
-            isGridLine?: boolean
-            orientation?: string
-            offsetX?: number
-            offsetY?: number
-          },
-        monitor,
-      ) => {
-        const boxRect = boxRef.current?.getBoundingClientRect()
-        if (!boxRect) return
-
-        const clientOffset = monitor.getClientOffset()
-        if (!clientOffset) return
-
-        // オフセットを取得（ドラッグ要素内でのクリック位置）
-        const offsetX = "offsetX" in item ? item.offsetX || 0 : 0
-        const offsetY = "offsetY" in item ? item.offsetY || 0 : 0
-
-        // ドロップ位置の計算（オフセットを考慮）
-        let x = Math.floor((clientOffset.x - boxRect.left - offsetX) / cellSize)
-        let y = Math.floor((clientOffset.y - boxRect.top - offsetY) / cellSize)
-
-        // グリッド範囲内に収める
-        x = Math.max(0, x)
-        y = Math.max(0, y)
-
-        // グリッドライン上の仕切りの場合
-        if (
-          ("isGridLine" in item && item.isGridLine) ||
-          ("type" in item && item.type === "divider" && "isGridLine" in item && item.isGridLine)
-        ) {
-          const orientation =
-            "item" in item && item.item && "orientation" in item.item
-              ? item.item.orientation
-              : "orientation" in item
-                ? (item.orientation as "horizontal" | "vertical")
-                : "horizontal"
-
-          // プレビュー位置がスナップされている場合、その位置を使用
-          if (previewPosition.isSnapped) {
-            x = previewPosition.x
-            y = previewPosition.y
-          } else {
-            if (orientation === "horizontal") {
-              // 水平仕切りの場合、行間に配置
-              y = Math.round((clientOffset.y - boxRect.top - offsetY) / cellSize)
-
-              // スナップ位置を確認
-              const snapPosition = findHorizontalSnapPosition(
-                x,
-                y,
-                item.width || 1,
-                "type" in item && item.type === "placedItem" ? item.id : undefined,
-              )
-              if (snapPosition) {
-                y = snapPosition.y
-              }
-            } else {
-              // 垂直仕切りの場合、列間に配置
-              x = Math.round((clientOffset.x - boxRect.left - offsetX) / cellSize)
-
-              // スナップ位置を確認
-              const snapPosition = findVerticalSnapPosition(
-                x,
-                y,
-                item.height || 1,
-                "type" in item && item.type === "placedItem" ? item.id : undefined,
-              )
-              if (snapPosition) {
-                x = snapPosition.x
-              }
-            }
-          }
-
-          // 配置可能かチェック
-          if (orientation === "horizontal") {
-            if (
-              !checkValidGridLinePlacement(
-                x,
-                y,
-                item.width || 1,
-                "horizontal",
-                "type" in item && item.type === "placedItem" ? item.id : undefined,
-              ) ||
-              !checkDividerSweetIntersection(
-                x,
-                y,
-                "horizontal",
-                item.width || 1,
-                "type" in item && item.type === "placedItem" ? item.id : undefined,
-              )
-            ) {
-              setPreviewPosition((prev) => ({ ...prev, visible: false }))
-              return
-            }
-          } else {
-            if (
-              !checkValidGridLinePlacement(
-                x,
-                y,
-                item.height || 1,
-                "vertical",
-                "type" in item && item.type === "placedItem" ? item.id : undefined,
-              ) ||
-              !checkDividerSweetIntersection(
-                x,
-                y,
-                "vertical",
-                item.height || 1,
-                "type" in item && item.type === "placedItem" ? item.id : undefined,
-              )
-            ) {
-              setPreviewPosition((prev) => ({ ...prev, visible: false }))
-              return
-            }
-          }
-
-          // placedItem の場合は移動処理（既存アイテムなら移動、別ソースからのドラッグならコピーして追加）
-          if ("type" in item && item.type === "placedItem") {
-            
-              setPlacedItems((prev) =>
-                prev.map((placedItem) => (placedItem.id === item.id ? { ...placedItem, x, y } : placedItem)),
-              )
-              
-
-            
-            setPreviewPosition((prev) => ({ ...prev, visible: false }))
             return
           }
 
-          // 新しい仕切りを追加
-          const newItemId = generateId()
-          const newItem: PlacedItem = {
-            id: newItemId,
-            itemId: "item" in item ? item.id : "",
-            type: "divider",
+          const isValidPlacement = checkValidGridLinePlacement(
             x,
             y,
-            width: orientation === "horizontal" ? item.width || 1 : 0,
-            height: orientation === "vertical" ? item.height || 1 : 0,
-            rotation: 0,
-            isLocked: false,
-            imageUrl: "item" in item && item.item ? item.item.imageUrl : "",
-            name: "item" in item && item.item ? item.item.name : "仕切り",
-            orientation,
+            item.width || 1,
+            "horizontal",
+            item.type === "placedItem" ? item.id : undefined,
+          )
+
+          const isValidIntersection = checkDividerSweetIntersection(
+            x,
+            y,
+            "horizontal",
+            item.width || 1,
+            item.type === "placedItem" ? item.id : undefined,
+          )
+
+          const isValid = isValidPlacement && isValidIntersection
+          setCanDropState(isValid)
+          setPreviewPosition({
+            x,
+            y,
+            width: item.width || 1,
+            height: 0,
+            isValid,
+            visible: true,
             isGridLine: true,
+            orientation: "horizontal",
+            isSnapped: false,
+          })
+          return
+        }
+
+        x = Math.round((left - boxRect.left) / cellSize)
+
+        const snapPosition = findVerticalSnapPosition(
+          x,
+          y,
+          item.height || 1,
+          item.type === "placedItem" ? item.id : undefined,
+        )
+
+        if (snapPosition) {
+          x = snapPosition.x
+
+          const isValidPlacement = checkValidGridLinePlacement(
+            x,
+            y,
+            item.height || 1,
+            "vertical",
+            item.type === "placedItem" ? item.id : undefined,
+          )
+
+          const isValidIntersection = checkDividerSweetIntersection(
+            x,
+            y,
+            "vertical",
+            item.height || 1,
+            item.type === "placedItem" ? item.id : undefined,
+          )
+
+          const isValid = isValidPlacement && isValidIntersection
+          setCanDropState(isValid)
+          setPreviewPosition({
+            x,
+            y,
+            width: 0,
+            height: item.height || 1,
+            isValid,
+            visible: true,
+            isGridLine: true,
+            orientation: "vertical",
+            isSnapped: true,
+          })
+          return
+        }
+
+        const isValidPlacement = checkValidGridLinePlacement(
+          x,
+          y,
+          item.height || 1,
+          "vertical",
+          item.type === "placedItem" ? item.id : undefined,
+        )
+
+        const isValidIntersection = checkDividerSweetIntersection(
+          x,
+          y,
+          "vertical",
+          item.height || 1,
+          item.type === "placedItem" ? item.id : undefined,
+        )
+
+        const isValid = isValidPlacement && isValidIntersection
+        setCanDropState(isValid)
+        setPreviewPosition({
+          x,
+          y,
+          width: 0,
+          height: item.height || 1,
+          isValid,
+          visible: true,
+          isGridLine: true,
+          orientation: "vertical",
+          isSnapped: false,
+        })
+        return
+      }
+
+      if (item.type === "placedItem") {
+        const itemWidth = item.width || 1
+        const itemHeight = item.height || 1
+        const isValid = checkValidPlacement(x, y, itemWidth, itemHeight, item.id)
+        setCanDropState(isValid)
+        setPreviewPosition({ x, y, width: itemWidth, height: itemHeight, isValid, visible: true })
+        return
+      }
+
+      if ("width" in item && "height" in item) {
+        const isValid = checkValidPlacement(x, y, item.width, item.height)
+        setCanDropState(isValid)
+        setPreviewPosition({ x, y, width: item.width, height: item.height, isValid, visible: true })
+      }
+    },
+    onDragEnd: (event) => {
+      const item = event.active.data.current as any
+      const position = getDragPosition(event)
+
+      if (!item || !position || event.over?.id !== "box-area") {
+        setCanDropState(false)
+        setPreviewPosition((prev) => ({ ...prev, visible: false }))
+        return
+      }
+
+      const { boxRect, left, top } = position
+      let x = Math.floor((left - boxRect.left) / cellSize)
+      let y = Math.floor((top - boxRect.top) / cellSize)
+      x = Math.max(0, x)
+      y = Math.max(0, y)
+
+      if ((item.isGridLine) || (item.type === "divider" && item.isGridLine)) {
+        const orientation =
+          item.item && "orientation" in item.item
+            ? item.item.orientation
+            : item.orientation
+              ? (item.orientation as "horizontal" | "vertical")
+              : "horizontal"
+
+        if (previewPosition.isSnapped) {
+          x = previewPosition.x
+          y = previewPosition.y
+        } else if (orientation === "horizontal") {
+          y = Math.round((top - boxRect.top) / cellSize)
+          const snapPosition = findHorizontalSnapPosition(
+            x,
+            y,
+            item.width || 1,
+            item.type === "placedItem" ? item.id : undefined,
+          )
+          if (snapPosition) {
+            y = snapPosition.y
           }
-
-          // 新しいアイテムのIDを追跡
-          setNewItemIds((prev) => new Set(prev).add(newItemId))
-          setTimeout(() => {
-            setNewItemIds((prev) => {
-              const updated = new Set(prev)
-              updated.delete(newItemId)
-              return updated
-            })
-          }, 500)
-
-          setPlacedItems((prev) => [...prev, newItem])
-          setPreviewPosition((prev) => ({ ...prev, visible: false }))
-          return
+        } else {
+          x = Math.round((left - boxRect.left) / cellSize)
+          const snapPosition = findVerticalSnapPosition(
+            x,
+            y,
+            item.height || 1,
+            item.type === "placedItem" ? item.id : undefined,
+          )
+          if (snapPosition) {
+            x = snapPosition.x
+          }
         }
 
-        // 通常のアイテム（和菓子）の場合
-        // placedItem の場合は移動処理（既存アイテムなら移動、別ソースからのドラッグならコピーして追加）
-        if ("type" in item && item.type === "placedItem") {
-          
-            // ドラッグ開始時の幅と高さを使用（回転後の値）
-            const itemWidth = "width" in item ? item.width : 1
-            const itemHeight = "height" in item ? item.height : 1
-
-            // 配置可能かチェック（回転も考慮）
-            if (!checkValidPlacement(x, y, itemWidth, itemHeight, item.id)) {
-              return
-            }
-
-            setPlacedItems((prev) =>
-              prev.map((placedItem) => (placedItem.id === item.id ? { ...placedItem, x, y } : placedItem)),
+        if (orientation === "horizontal") {
+          if (
+            !checkValidGridLinePlacement(
+              x,
+              y,
+              item.width || 1,
+              "horizontal",
+              item.type === "placedItem" ? item.id : undefined,
+            ) ||
+            !checkDividerSweetIntersection(
+              x,
+              y,
+              "horizontal",
+              item.width || 1,
+              item.type === "placedItem" ? item.id : undefined,
             )
-            
+          ) {
+            setCanDropState(false)
+            setPreviewPosition((prev) => ({ ...prev, visible: false }))
+            return
+          }
+        } else {
+          if (
+            !checkValidGridLinePlacement(
+              x,
+              y,
+              item.height || 1,
+              "vertical",
+              item.type === "placedItem" ? item.id : undefined,
+            ) ||
+            !checkDividerSweetIntersection(
+              x,
+              y,
+              "vertical",
+              item.height || 1,
+              item.type === "placedItem" ? item.id : undefined,
+            )
+          ) {
+            setCanDropState(false)
+            setPreviewPosition((prev) => ({ ...prev, visible: false }))
+            return
+          }
+        }
 
-          
+        if (item.type === "placedItem") {
+          setPlacedItems((prev) => prev.map((placedItem) => (placedItem.id === item.id ? { ...placedItem, x, y } : placedItem)))
+          setCanDropState(false)
           setPreviewPosition((prev) => ({ ...prev, visible: false }))
           return
         }
 
-        // 以下は既存のコード（新規アイテムの配置処理）
-        // 配置可能かチェック
-        if (!("width" in item) || !("height" in item) || !checkValidPlacement(x, y, item.width, item.height)) {
-          setPreviewPosition((prev) => ({ ...prev, visible: false }))
-          return
-        }
-
-        // 新しいアイテムのIDを生成
         const newItemId = generateId()
-
-        // 新しいアイテムを追加
         const newItem: PlacedItem = {
           id: newItemId,
           itemId: item.id,
-          type: item.type as "sweet" | "divider",
+          type: "divider",
           x,
           y,
-          width: item.width,
-          height: item.height,
+          width: orientation === "horizontal" ? item.width || 1 : 0,
+          height: orientation === "vertical" ? item.height || 1 : 0,
           rotation: 0,
           isLocked: false,
-          imageUrl: item.item?.placedImageUrl || item.item?.imageUrl || "",
-          name: item.item?.name || "",
-          price: "item" in item && item.item && "price" in item.item ? item.item.price : undefined,
-          orientation: "item" in item && item.item && "orientation" in item.item ? item.item.orientation : undefined,
+          imageUrl: item.item?.imageUrl || "",
+          name: item.item?.name || "仕切り",
+          orientation,
+          isGridLine: true,
         }
 
-        // 新しいアイテムのIDを追跡
         setNewItemIds((prev) => new Set(prev).add(newItemId))
-
-        // 一定時間後に新しいアイテムのフラグをクリア
         setTimeout(() => {
           setNewItemIds((prev) => {
             const updated = new Set(prev)
@@ -700,19 +578,73 @@ export default function BoxArea({
         }, 500)
 
         setPlacedItems((prev) => [...prev, newItem])
+        setCanDropState(false)
         setPreviewPosition((prev) => ({ ...prev, visible: false }))
-      },
-      collect: (monitor) => ({
-        isOver: !!monitor.isOver(),
-        canDrop: !!monitor.canDrop(),
-      }),
-    }),
-    [gridSize, newItemIds, previewPosition.isSnapped, placedItems],
-  )
+        return
+      }
+
+      if (item.type === "placedItem") {
+        const itemWidth = item.width || 1
+        const itemHeight = item.height || 1
+
+        if (!checkValidPlacement(x, y, itemWidth, itemHeight, item.id)) {
+          setCanDropState(false)
+          setPreviewPosition((prev) => ({ ...prev, visible: false }))
+          return
+        }
+
+        setPlacedItems((prev) => prev.map((placedItem) => (placedItem.id === item.id ? { ...placedItem, x, y } : placedItem)))
+        setCanDropState(false)
+        setPreviewPosition((prev) => ({ ...prev, visible: false }))
+        return
+      }
+
+      if (!("width" in item) || !("height" in item) || !checkValidPlacement(x, y, item.width, item.height)) {
+        setCanDropState(false)
+        setPreviewPosition((prev) => ({ ...prev, visible: false }))
+        return
+      }
+
+      const newItemId = generateId()
+      const newItem: PlacedItem = {
+        id: newItemId,
+        itemId: item.id,
+        type: item.type as "sweet" | "divider",
+        x,
+        y,
+        width: item.width,
+        height: item.height,
+        rotation: 0,
+        isLocked: false,
+        imageUrl: item.item?.placedImageUrl || item.item?.imageUrl || "",
+        name: item.item?.name || "",
+        price: item.item?.price,
+        orientation: item.item?.orientation,
+      }
+
+      setNewItemIds((prev) => new Set(prev).add(newItemId))
+      setTimeout(() => {
+        setNewItemIds((prev) => {
+          const updated = new Set(prev)
+          updated.delete(newItemId)
+          return updated
+        })
+      }, 500)
+
+      setPlacedItems((prev) => [...prev, newItem])
+      setCanDropState(false)
+      setPreviewPosition((prev) => ({ ...prev, visible: false }))
+    },
+    onDragCancel: () => {
+      setCanDropState(false)
+      setPreviewPosition((prev) => ({ ...prev, visible: false }))
+    },
+  })
 
   // ドラッグが終了したらプレビューを非表示にする
   useEffect(() => {
     if (!isOver) {
+      setCanDropState(false)
       setPreviewPosition((prev) => ({ ...prev, visible: false }))
     }
   }, [isOver])
@@ -1203,10 +1135,10 @@ export default function BoxArea({
         <div
           ref={(node) => {
             boxRef.current = node
-            drop(node)
+            setDroppableNodeRef(node)
           }}
           data-testid="box-area"
-          className={`relative border-2 border-[var(--color-indigo)] bg-[var(--color-beige-dark)] ${isOver && canDrop ? "drag-over" : ""
+          className={`relative border-2 border-[var(--color-indigo)] bg-[var(--color-beige-dark)] ${isOver && canDropState ? "drag-over" : ""
             } rounded shadow-md overflow-hidden`}
           style={{
             width: Math.min(gridSize.width * cellSize, maxDisplaySize.maxWidth),

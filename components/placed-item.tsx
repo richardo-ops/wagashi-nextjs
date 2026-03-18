@@ -4,7 +4,7 @@
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
-import { useDrag } from "react-dnd"
+import { useDraggable } from "@dnd-kit/core"
 import type { PlacedItem } from "@/types/types"
 import { Lock } from "lucide-react"
 
@@ -57,42 +57,20 @@ export default function PlacedItemComponent({
     }
   }, [item.x, item.y])
 
-  // useDrag フックの部分を以下のように修正します
-  const [{ isDragging }, drag] = useDrag(
-    () => ({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `placed-${item.id}`,
+    disabled: item.isLocked,
+    data: {
+      id: item.id,
       type: "placedItem",
-      item: (monitor) => {
-        // ドラッグ開始時の要素の位置を取得
-        const initialClientOffset = monitor.getInitialClientOffset()
-        const initialSourceClientOffset = monitor.getInitialSourceClientOffset()
-
-        // 要素内でのクリック位置（オフセット）を計算
-        let offsetX = 0
-        let offsetY = 0
-
-        if (initialClientOffset && initialSourceClientOffset) {
-          offsetX = initialClientOffset.x - initialSourceClientOffset.x
-          offsetY = initialClientOffset.y - initialSourceClientOffset.y
-        }
-
-        return {
-          id: item.id,
-          type: "placedItem",
-          width: item.width,
-          height: item.height,
-          isGridLine: item.isGridLine,
-          orientation: item.orientation,
-          offsetX,
-          offsetY,
-        }
-      },
-      canDrag: !item.isLocked,
-      collect: (monitor) => ({
-        isDragging: !!monitor.isDragging(),
-      }),
-    }),
-    [item.id, item.width, item.height, item.isLocked, item.isGridLine, item.orientation], // 依存配列
-  )
+      width: item.width,
+      height: item.height,
+      isGridLine: item.isGridLine,
+      orientation: item.orientation,
+      itemId: item.itemId,
+      item,
+    },
+  })
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (item.isLocked) return
@@ -211,8 +189,10 @@ export default function PlacedItemComponent({
     <div
       ref={(node) => {
         elementRef.current = node
-        drag(node)
+        setNodeRef(node)
       }}
+      {...listeners}
+      {...attributes}
       data-testid="placed-item"
       className={`absolute cursor-move placed-item ${isDragging ? "opacity-50" : "opacity-100"} ${
         item.isLocked ? "cursor-not-allowed" : ""
@@ -223,6 +203,7 @@ export default function PlacedItemComponent({
         width: item.width * cellSize,
         height: item.height * cellSize,
         zIndex: item.type === "divider" ? 25 : 20, // 仕切りのzIndexを和菓子よりも高く設定
+        touchAction: "none",
       }}
       onContextMenu={onContextMenu}
       onDoubleClick={() => item.type === "sweet" && onDoubleClick && onDoubleClick(item)}
