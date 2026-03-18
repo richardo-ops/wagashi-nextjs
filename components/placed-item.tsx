@@ -10,7 +10,7 @@ import { Lock } from "lucide-react"
 
 interface PlacedItemProps {
   item: PlacedItem
-  onContextMenu: (e: React.MouseEvent) => void
+  onContextMenu: (position: { clientX: number; clientY: number }) => void
   setPlacedItems: React.Dispatch<React.SetStateAction<PlacedItem[]>>
   isNew?: boolean
   cellSize: number
@@ -111,7 +111,21 @@ export default function PlacedItemComponent({
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
-    onContextMenu(e)
+    onContextMenu({ clientX: e.clientX, clientY: e.clientY })
+  }
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 2) return
+
+    e.preventDefault()
+    e.stopPropagation()
+
+    const firstTouch = e.touches[0]
+    const secondTouch = e.touches[1]
+    const clientX = (firstTouch.clientX + secondTouch.clientX) / 2
+    const clientY = (firstTouch.clientY + secondTouch.clientY) / 2
+
+    onContextMenu({ clientX, clientY })
   }
 
   /* しきりに関する項目のため削除予定
@@ -207,6 +221,7 @@ export default function PlacedItemComponent({
         touchAction: "none",
       }}
       onContextMenu={handleContextMenu}
+      onTouchStart={handleTouchStart}
       onDoubleClick={() => item.type === "sweet" && onDoubleClick && onDoubleClick(item)}
       tabIndex={0}
       onKeyDown={handleKeyDown}
