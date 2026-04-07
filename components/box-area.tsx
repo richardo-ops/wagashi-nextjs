@@ -3,10 +3,10 @@
 import type React from "react"
 
 // 既存のインポート
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { flushSync } from "react-dom"
 import { useDndMonitor, useDroppable } from "@dnd-kit/core"
-import type { BoxSize, PlacedItem, SweetItem } from "@/types/types"
+import type { BoxSize, BoxType, PlacedItem, SweetItem } from "@/types/types"
 import PlacedItemComponent from "./placed-item"
 import ContextMenu from "./context-menu"
 import DividerResizeModal from "./divider-resize-modal"
@@ -59,14 +59,51 @@ export default function BoxArea({
 
   // sweetsデータを状態として管理
   const [sweets, setSweets] = useState<SweetItem[]>([])
+  const [boxTypes, setBoxTypes] = useState<BoxType[]>([])
 
 
 
   // 仕切り長さ調整用の状態
   const [resizingDivider, setResizingDivider] = useState<PlacedItem | null>(null)
 
-  const activeBoxLengthCm = Number((activeBoxSize ?? boxSize).split("x")[0])
-  const shouldShowDynamicGuideDivider = boxSize === "45x22" && activeBoxLengthCm > 0 && activeBoxLengthCm < 45
+  const currentBoxLengthCm = Number(boxSize.split("x")[0])
+
+  useEffect(() => {
+    const loadBoxTypes = async () => {
+      try {
+        const response = await fetch("/api/box-types")
+        if (!response.ok) {
+          setBoxTypes([])
+          return
+        }
+
+        const data = (await response.json()) as BoxType[]
+        setBoxTypes(data)
+      } catch (error) {
+        console.error("Failed to load box types:", error)
+        setBoxTypes([])
+      }
+    }
+
+    loadBoxTypes()
+  }, [])
+
+  const guideDividerSizesCm = useMemo(() => {
+    const parsedSizes = boxTypes
+      .map((boxType) => Number.parseFloat(boxType.size.split("x")[0]))
+      .filter((size) => Number.isFinite(size) && size > 0)
+
+    const uniqueSizes = Array.from(new Set(parsedSizes)).sort((a, b) => a - b)
+    const largestSize = uniqueSizes[uniqueSizes.length - 1] ?? currentBoxLengthCm
+
+    if (currentBoxLengthCm !== largestSize) {
+      return []
+    }
+
+    return uniqueSizes.filter((size) => size < largestSize)
+  }, [boxTypes, currentBoxLengthCm])
+
+  const shouldShowDynamicGuideDivider = guideDividerSizesCm.length > 0
 
   // 表示上の最大サイズを定義（cm単位の箱サイズに基づいて計算）
   const getMaxDisplaySize = () => {
@@ -1195,19 +1232,24 @@ export default function BoxArea({
             />
           ))}
         </div>
-        {/* MX9(45x22)選択時は、現在有効な箱長に応じた仕切り線を1本描画 */}
+        {/* 最大箱選択時は、DBの箱サイズに対応する仕切り線を描画 */}
         {shouldShowDynamicGuideDivider && (
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              left: `${activeBoxLengthCm * 10 * cellSize}px`,
-              top: 0,
-              bottom: 0,
-              width: "0px",
-              borderLeft: "4px solid var(--color-indigo)",
-              zIndex: 20,
-            }}
-          />
+          <>
+            {guideDividerSizesCm.map((dividerSizeCm) => (
+              <div
+                key={`guide-divider-${dividerSizeCm}`}
+                className="absolute pointer-events-none"
+                style={{
+                  left: `${dividerSizeCm * 10 * cellSize}px`,
+                  top: 0,
+                  bottom: 0,
+                  width: "0px",
+                  borderLeft: "4px solid var(--color-indigo)",
+                  zIndex: 20,
+                }}
+              />
+            ))}
+          </>
         )}
 
         {/* 配置プレビュー */}
