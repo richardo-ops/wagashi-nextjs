@@ -219,6 +219,12 @@ export default function WagashiSimulatorContent({
   }
   const effectiveBoxDef = getEffectiveBoxDef()
 
+  const effectiveBoxSize = useMemo<BoxSize>(() => {
+    if (!effectiveBoxDef) return boxSize
+    if ("sizeStr" in effectiveBoxDef) return effectiveBoxDef.sizeStr as BoxSize
+    return effectiveBoxDef.size
+  }, [effectiveBoxDef, boxSize])
+
   // 詰め合わせの上限金額（円）を設定する状態
   const [priceLimitStr, setPriceLimitStr] = useState<string>("")
   const [priceLimit, setPriceLimit] = useState<number | null>(null)
@@ -648,6 +654,7 @@ export default function WagashiSimulatorContent({
             <div ref={boxAreaRef} className="w-full">
               <BoxArea
                 boxSize={boxSize}
+                activeBoxSize={effectiveBoxSize}
                 placedItems={placedItems}
                 setPlacedItems={setPlacedItems}
                 infoSettings={infoSettings}
@@ -664,6 +671,7 @@ export default function WagashiSimulatorContent({
             <div ref={boxAreaRef} className="flex-1 overflow-visible max-w-none w-full">
               <BoxArea
                 boxSize={boxSize}
+                activeBoxSize={effectiveBoxSize}
                 placedItems={placedItems}
                 setPlacedItems={setPlacedItems}
                 infoSettings={infoSettings}

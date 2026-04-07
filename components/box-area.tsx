@@ -21,6 +21,7 @@ import { fetchSweets } from "@/services/api-service"
 // BoxAreaProps インターフェース
 interface BoxAreaProps {
   boxSize: BoxSize
+  activeBoxSize?: BoxSize
   placedItems: PlacedItem[]
   setPlacedItems: React.Dispatch<React.SetStateAction<PlacedItem[]>>
   infoSettings: InfoDisplaySettings
@@ -33,6 +34,7 @@ interface BoxAreaProps {
 // BoxArea 関数
 export default function BoxArea({
   boxSize,
+  activeBoxSize,
   placedItems,
   setPlacedItems,
   infoSettings,
@@ -62,6 +64,9 @@ export default function BoxArea({
 
   // 仕切り長さ調整用の状態
   const [resizingDivider, setResizingDivider] = useState<PlacedItem | null>(null)
+
+  const activeBoxLengthCm = Number((activeBoxSize ?? boxSize).split("x")[0])
+  const shouldShowDynamicGuideDivider = boxSize === "45x22" && activeBoxLengthCm > 0 && activeBoxLengthCm < 45
 
   // 表示上の最大サイズを定義（cm単位の箱サイズに基づいて計算）
   const getMaxDisplaySize = () => {
@@ -1190,98 +1195,19 @@ export default function BoxArea({
             />
           ))}
         </div>
-        {/* MX1–MX8 vertical dividers when showing MX9 (45x22) */}
-        {boxSize === "45x22" && (
-          <>
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${22 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${25.5 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${28.5 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${32.5 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${35 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${37.5 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${39 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${42 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-          </>
+        {/* MX9(45x22)選択時は、現在有効な箱長に応じた仕切り線を1本描画 */}
+        {shouldShowDynamicGuideDivider && (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: `${activeBoxLengthCm * 10 * cellSize}px`,
+              top: 0,
+              bottom: 0,
+              width: "0px",
+              borderLeft: "4px solid var(--color-indigo)",
+              zIndex: 20,
+            }}
+          />
         )}
 
         {/* 配置プレビュー */}
