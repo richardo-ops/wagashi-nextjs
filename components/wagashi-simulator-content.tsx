@@ -57,6 +57,30 @@ function getAutoSelectedBox(items: any[]) {
   return getBoxDefForCm(maxCm)
 }
 
+function parseBoxSize(size: string) {
+  const [rawWidth, rawHeight] = size.replace(/[×*]/g, "x").split("x")
+  const width = Number(rawWidth)
+  const height = Number(rawHeight)
+
+  if (Number.isNaN(width) || Number.isNaN(height)) {
+    return null
+  }
+
+  return { width, height }
+}
+
+function isSizeGreater(a: string, b: string) {
+  const parsedA = parseBoxSize(a)
+  const parsedB = parseBoxSize(b)
+  if (!parsedA || !parsedB) return false
+
+  if (parsedA.width !== parsedB.width) {
+    return parsedA.width > parsedB.width
+  }
+
+  return parsedA.height > parsedB.height
+}
+
 // インターフェース（型宣言）
 interface WagashiSimulatorContentProps {
   boxSize: BoxSize
@@ -115,6 +139,7 @@ export default function WagashiSimulatorContent({
   const [isDesktopLayout, setIsDesktopLayout] = useState(false)
   //選択中モーダルの状態
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false)
+  const [companyMaxBoxSize, setCompanyMaxBoxSize] = useState<string | null>(null)
 
   //追加： Next.js のルーター
   const router = useRouter()
@@ -127,6 +152,29 @@ export default function WagashiSimulatorContent({
     mediaQuery.addEventListener("change", updateLayout)
 
     return () => mediaQuery.removeEventListener("change", updateLayout)
+  }, [])
+
+  useEffect(() => {
+    const fetchCompanyMaxBoxSize = async () => {
+      try {
+        const response = await fetch("/api/box-types")
+        if (!response.ok) return
+
+        const boxTypes = (await response.json()) as BoxType[]
+        if (!Array.isArray(boxTypes) || boxTypes.length === 0) return
+
+        const maxSize = boxTypes.reduce((max, boxType) => {
+          if (!max) return boxType.size
+          return isSizeGreater(boxType.size, max) ? boxType.size : max
+        }, boxTypes[0].size)
+
+        setCompanyMaxBoxSize(maxSize)
+      } catch (error) {
+        console.error("Failed to fetch box types for max-size check:", error)
+      }
+    }
+
+    fetchCompanyMaxBoxSize()
   }, [])
 
   // 要素の参照
@@ -207,8 +255,10 @@ export default function WagashiSimulatorContent({
   // 選択中の箱（表示用） — B9 を選択している場合は配置位置に応じて実際の箱タイプを決定する
   const getEffectiveBoxDef = () => {
     if (!selectedBoxType) return null
-    // selectedBoxType.size may be like "45x22"
-    if (selectedBoxType.size === "45x22") {
+    // 企業ごとの最大サイズ箱を選択しているときのみ、配置位置に応じて箱タイプを動的判定
+    const fallbackMaxSize = BOX_TYPE_DEFS[BOX_TYPE_DEFS.length - 1]?.sizeStr
+    const maxSizeForDynamicCheck = companyMaxBoxSize ?? fallbackMaxSize
+    if (maxSizeForDynamicCheck && selectedBoxType.size === maxSizeForDynamicCheck) {
       // 動的判定: 配置済み和菓子の右端位置から最も大きい箱定義を選択
       const sweets = placedItems.filter((it) => it.type === "sweet")
       if (sweets.length === 0) return selectedBoxType

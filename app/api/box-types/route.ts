@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getPublicCompanyContext } from "@/lib/company-session"
+import { getCompanyContext, getPublicCompanyContext } from "@/lib/company-session"
 
 // 箱タイプ一覧取得
 export async function GET() {
@@ -44,7 +44,10 @@ export async function POST(request: Request) {
       )
     }
 
-    const normalizedSize = String(size).trim()
+    const normalizedSize = String(size)
+      .trim()
+      .replace(/[×＊*xXｘＸ]/g, "x")
+      .replace(/\s+/g, "")
     if (!/^\d+(\.\d+)?x\d+(\.\d+)?$/.test(normalizedSize)) {
       return NextResponse.json(
         { error: "サイズは「幅x高さ」の形式で入力してください（例: 22x22）" },
