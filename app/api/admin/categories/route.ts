@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getCompanyContext } from '@/lib/company-session'
 
 // カテゴリー一覧取得
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       console.error('認証エラー: セッションが見つかりません')
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
-    console.log('認証成功:', session.user?.email)
-
     const categories = await prisma.category.findMany({
+      where: { companyId: context.company.id },
       orderBy: { createdAt: 'desc' }
     })
 
@@ -29,8 +27,8 @@ export async function GET() {
 // カテゴリー作成
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
@@ -42,7 +40,12 @@ export async function POST(request: NextRequest) {
     }
 
     const existingCategory = await prisma.category.findUnique({
-      where: { name }
+      where: {
+        companyId_name: {
+          companyId: context.company.id,
+          name,
+        }
+      }
     })
 
     if (existingCategory) {
@@ -51,6 +54,7 @@ export async function POST(request: NextRequest) {
 
     const category = await prisma.category.create({
       data: {
+        companyId: context.company.id,
         name,
         description
       }

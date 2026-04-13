@@ -1,25 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { compareJapaneseStrings } from '@/lib/utils'
+import { getCompanyContext } from '@/lib/company-session'
 
 // 商品一覧取得
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       console.error('認証エラー: セッションが見つかりません')
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
-
-    console.log('認証成功:', session.user?.email)
 
     const products = await prisma.product.findMany({
       include: {
         category: true,
         stocks: true
-      }
+      },
+      where: { companyId: context.company.id }
     })
 
     products.sort((left, right) => {
@@ -42,8 +40,8 @@ export async function GET() {
 // 商品作成
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
@@ -96,12 +94,13 @@ export async function POST(request: NextRequest) {
       where: { id: categoryId }
     })
 
-    if (!category) {
+    if (!category || category.companyId !== context.company.id) {
       return NextResponse.json({ error: '指定されたカテゴリーが存在しません' }, { status: 400 })
     }
 
     const product = await prisma.product.create({
       data: {
+        companyId: context.company.id,
         name,
         price: parseInt(price),
         categoryId,
@@ -125,6 +124,7 @@ export async function POST(request: NextRequest) {
     // 在庫レコードも作成
     await prisma.stock.create({
       data: {
+        companyId: context.company.id,
         productId: product.id,
         quantity: 0
       }

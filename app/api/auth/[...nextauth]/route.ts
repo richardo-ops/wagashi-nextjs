@@ -19,6 +19,9 @@ export const authOptions: AuthOptions = {
         const user = await prisma.adminUser.findUnique({
           where: {
             email: credentials.email
+          },
+          include: {
+            company: true,
           }
         })
 
@@ -36,7 +39,9 @@ export const authOptions: AuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role
+          role: user.role,
+          companyId: user.company.companyId,
+          companyName: user.company.name,
         }
       }
     })
@@ -52,6 +57,8 @@ export const authOptions: AuthOptions = {
     async jwt({ token, user }: any) {
       if (user) {
         token.role = user.role
+        token.companyId = user.companyId
+        token.companyName = user.companyName
       }
       return token
     },
@@ -59,6 +66,8 @@ export const authOptions: AuthOptions = {
       if (token) {
         session.user.id = token.sub!
         session.user.role = token.role as string
+        session.user.companyId = token.companyId as string
+        session.user.companyName = token.companyName as string
       }
       return session
     },

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
+import { getCompanyContext } from '@/lib/company-session'
 
 // 商品更新
 export async function PUT(
@@ -9,8 +9,8 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const session = await getServerSession()
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
@@ -63,7 +63,12 @@ export async function PUT(
       where: { id: categoryId }
     })
 
-    if (!category) {
+    const productOwner = await prisma.product.findUnique({ where: { id } })
+    if (!productOwner || productOwner.companyId !== context.company.id) {
+      return NextResponse.json({ error: '商品の更新に失敗しました' }, { status: 404 })
+    }
+
+    if (!category || category.companyId !== context.company.id) {
       return NextResponse.json({ error: '指定されたカテゴリーが存在しません' }, { status: 400 })
     }
 
@@ -115,9 +120,14 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const session = await getServerSession()
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+    }
+
+    const productOwner = await prisma.product.findUnique({ where: { id } })
+    if (!productOwner || productOwner.companyId !== context.company.id) {
+      return NextResponse.json({ error: '商品の削除に失敗しました' }, { status: 404 })
     }
 
     // 在庫レコードも削除（CASCADE設定により自動削除される）

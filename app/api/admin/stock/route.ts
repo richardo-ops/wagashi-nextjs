@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getCompanyContext } from '@/lib/company-session'
 
 // 在庫一覧取得
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
@@ -26,7 +25,7 @@ export async function GET(request: NextRequest) {
           where: { storeId }
         }
       },
-      where: { isActive: true },
+      where: { isActive: true, companyId: context.company.id },
       orderBy: { name: 'asc' }
     })
 
@@ -58,8 +57,8 @@ export async function GET(request: NextRequest) {
 // 在庫更新
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
@@ -76,13 +75,15 @@ export async function PUT(request: NextRequest) {
 
     const stock = await prisma.stock.upsert({
       where: { 
-        productId_storeId: {
+        companyId_productId_storeId: {
+          companyId: context.company.id,
           productId,
           storeId
         }
       },
       update: { quantity },
       create: {
+        companyId: context.company.id,
         productId,
         storeId,
         quantity

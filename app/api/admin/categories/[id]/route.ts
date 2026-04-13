@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getCompanyContext } from '@/lib/company-session'
 
 // カテゴリー更新
 export async function PUT(
@@ -9,8 +8,8 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
@@ -24,10 +23,17 @@ export async function PUT(
     // 同じ名前のカテゴリーが他に存在するかチェック
     const existingCategory = await prisma.category.findFirst({
       where: {
+        companyId: context.company.id,
         name,
         id: { not: params.id }
       }
     })
+
+    const currentCategory = await prisma.category.findUnique({ where: { id: params.id } })
+
+    if (!currentCategory || currentCategory.companyId !== context.company.id) {
+      return NextResponse.json({ error: '指定されたカテゴリーが存在しません' }, { status: 404 })
+    }
 
     if (existingCategory) {
       return NextResponse.json({ error: 'このカテゴリー名は既に存在します' }, { status: 400 })
@@ -53,15 +59,21 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
     // カテゴリーに関連する商品があるかチェック
     const productsCount = await prisma.product.count({
-      where: { categoryId: params.id }
+      where: { categoryId: params.id, companyId: context.company.id }
     })
+
+    const currentCategory = await prisma.category.findUnique({ where: { id: params.id } })
+
+    if (!currentCategory || currentCategory.companyId !== context.company.id) {
+      return NextResponse.json({ error: '指定されたカテゴリーが存在しません' }, { status: 404 })
+    }
 
     if (productsCount > 0) {
       return NextResponse.json(

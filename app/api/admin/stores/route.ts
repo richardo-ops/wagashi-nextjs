@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getCompanyContext } from "@/lib/company-session"
 
 export async function GET() {
   try {
+    const context = await getCompanyContext()
+    if (!context) {
+      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
+    }
+
     const stores = await prisma.store.findMany({
+      where: { companyId: context.company.id },
       orderBy: { createdAt: 'desc' }
     })
 
@@ -19,6 +26,11 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const context = await getCompanyContext()
+    if (!context) {
+      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
+    }
+
     const body = await request.json()
     const { name, description, address, phone, isActive } = body
 
@@ -31,6 +43,7 @@ export async function POST(request: Request) {
 
     const store = await prisma.store.create({
       data: {
+        companyId: context.company.id,
         name,
         description: description || null,
         address: address || null,
