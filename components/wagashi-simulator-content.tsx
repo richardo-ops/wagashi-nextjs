@@ -16,9 +16,12 @@ import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { PlusCircle, Save, Upload, HelpCircle, Settings, Package, Cloud, Printer, Trash2, Eye } from "lucide-react"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 //追加
 import { useRouter } from "next/navigation"
+
+// 選択中商品表示のモーダル（仮）
+import SelectItemModal from "@/components/select-item-modal"
 
 // Box type definitions (size in cm and price)
 const BOX_TYPE_DEFS = [
@@ -54,6 +57,7 @@ function getAutoSelectedBox(items: any[]) {
   return getBoxDefForCm(maxCm)
 }
 
+// インターフェース（型宣言）
 interface WagashiSimulatorContentProps {
   boxSize: BoxSize
   setBoxSize: React.Dispatch<React.SetStateAction<BoxSize>>
@@ -109,6 +113,8 @@ export default function WagashiSimulatorContent({
   // 箱選択モーダルの状態
   const [isBoxSelectionOpen, setIsBoxSelectionOpen] = useState(false)
   const [isDesktopLayout, setIsDesktopLayout] = useState(false)
+  //選択中モーダルの状態
+  const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false)
 
   //追加： Next.js のルーター
   const router = useRouter()
@@ -124,14 +130,14 @@ export default function WagashiSimulatorContent({
   }, [])
 
   // 要素の参照
-  const selectionAreaRef = null
-  const boxAreaRef = null
-  const contextMenuRef = null
-  const productInfoRef = null
-  const settingsRef = null
-  const saveLoadRef = null
-  const customerCodeSaveRef = null
-  const printRef = null
+  const selectionAreaRef = useRef<HTMLDivElement>(null)
+  const boxAreaRef = useRef<HTMLDivElement>(null)
+  const contextMenuRef = useRef<HTMLDivElement>(null)
+  const productInfoRef = useRef<HTMLDivElement>(null)
+  const settingsRef = useRef<HTMLButtonElement>(null)
+  const saveLoadRef = useRef<HTMLDivElement>(null)
+  const customerCodeSaveRef = useRef<HTMLButtonElement>(null)
+  const printRef = useRef<HTMLButtonElement>(null)
 
   // 商品変更通知を受け取る
   useEffect(() => {
@@ -585,6 +591,16 @@ export default function WagashiSimulatorContent({
                 >
                   <HelpCircle className="h-5 w-5" />
                 </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo-light)] border-[var(--color-indigo-dark)]"
+                  onClick={() => setIsSelectionModalOpen(true)}
+                >
+                  一覧
+                  <span className="hidden xl:inline ml-1">現在の商品</span>
+                </Button>
               </div>
             </div>
           </div>
@@ -667,6 +683,62 @@ export default function WagashiSimulatorContent({
           </div>
 
           {/* デスクトップ用のレイアウト */}
+          {/* 合計金額表示（デスクトップ） */}
+          <div className="w-3/4 mb-4 p-1 bg-white rounded-sm border border-[var(--color-indigo-light)] shadow-sm">
+            <div className="space-y-2">
+              <div className="pt-2 flex justify-between">
+                <span className="text-xl font-bold text-[var(--color-indigo)]" data-testid="total-price">
+                  {calculateTotalPrice().toLocaleString()}円 (箱代：{getAutoSelectedBox(placedItems).price ?? 0}円)
+                </span>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`font-bold px-4 py-1 rounded bg-[var(--color-indigo-light)] border border-[var(--color-indigo)] text-white transition-colors text-base shadow ${hasOverlap ? 'opacity-60 cursor-not-allowed hover:bg-[var(--color-indigo-light)]' : 'hover:bg-[var(--color-indigo)] hover:text-white'}`}
+                  onClick={() => {
+                    if (hasOverlap) return
+                    sessionStorage.setItem("placedItems", JSON.stringify(placedItems))
+                    sessionStorage.setItem("boxSize", boxSize)
+                    sessionStorage.setItem("selectedBoxType", JSON.stringify(selectedBoxType))
+                    sessionStorage.setItem("products", JSON.stringify(groupedPlacedItems))
+                    sessionStorage.setItem("needsNoshi", JSON.stringify(false))
+                    sessionStorage.setItem("needsBag", JSON.stringify(selectedBag.qty > 0))
+                    sessionStorage.setItem("selectedBag", JSON.stringify(selectedBag))
+                    router.push('/confirm')
+                  }}
+                  disabled={hasOverlap}
+                  title={hasOverlap ? '商品が重なっています：確認できません' : undefined}
+                >
+                  確認
+                </Button>
+
+                {/* 上限金額設定（デスクトップ） */}
+                <div className="flex items-center gap-2 flex-nowrap">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="上限額（円）を入力"
+                    value={priceLimitStr}
+                    onChange={(e) => setPriceLimitStr(e.target.value)}
+                    className="flex-1 min-w-0 p-2 border rounded text-sm"                    />
+                  <button onClick={applyPriceLimit} className="px-3 py-2 bg-[var(--color-indigo)] text-white rounded text-sm whitespace-nowrap">設定</button>
+                  <button onClick={clearPriceLimit} className="px-3 py-2 border rounded text-sm whitespace-nowrap">クリア</button>
+                </div>
+                {priceLimit !== null && (
+                  <div className="mt-2 text-sm">
+                    {remainingAmount !== null && remainingAmount >= 0 ? (
+                      <div className="text-green-600">残り: {remainingAmount.toLocaleString()}円</div>
+                    ) : (
+                      <div className="text-red-600">超過: {Math.abs(remainingAmount || 0).toLocaleString()}円</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+
+          {/* 箱エリア */}
           <div className="hidden lg:flex gap-4">
             <div ref={boxAreaRef} className="flex-1 overflow-visible max-w-none w-full">
               <BoxArea
@@ -680,143 +752,40 @@ export default function WagashiSimulatorContent({
                 selectedStoreId={selectedStoreId}
                 dndEnabled={isDesktopLayout}
               />
-            </div>
-            <div className="flex flex-col min-h-[calc(100vh-140px)] w-80 flex-shrink-0">
-              {/* 合計金額表示（デスクトップ） */}
-              <div className="mb-4 p-4 bg-white rounded-sm border border-[var(--color-indigo-light)] shadow-sm">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">和菓子:</span>
-                    <span>
-                      {placedItems
-                        .filter((item) => item.type === "sweet" && item.price)
-                        .reduce((total, item) => total + (item.price || 0), 0)
-                        .toLocaleString()}円
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">箱代 ({effectiveBoxDef ? effectiveBoxDef.name : selectedBoxType ? selectedBoxType.name : boxSize}):</span>
-                    <span>{effectiveBoxDef ? effectiveBoxDef.price.toLocaleString() : selectedBoxType ? selectedBoxType.price.toLocaleString() : 0}円</span>
-                  </div>
-                  <div className="border-t pt-2 flex justify-between">
-                    <span className="text-lg font-medium text-[var(--color-indigo)]">合計:</span>
-                    <span className="text-xl font-bold text-[var(--color-indigo)]" data-testid="total-price">
-                      {calculateTotalPrice().toLocaleString()}円
-                    </span>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={`font-bold px-4 py-1 rounded bg-[var(--color-indigo-light)] border border-[var(--color-indigo)] text-white transition-colors text-base shadow ${hasOverlap ? 'opacity-60 cursor-not-allowed hover:bg-[var(--color-indigo-light)]' : 'hover:bg-[var(--color-indigo)] hover:text-white'}`}
-                      onClick={() => {
-                        if (hasOverlap) return
-                        sessionStorage.setItem("placedItems", JSON.stringify(placedItems))
-                        sessionStorage.setItem("boxSize", boxSize)
-                        sessionStorage.setItem("selectedBoxType", JSON.stringify(selectedBoxType))
-                        sessionStorage.setItem("products", JSON.stringify(groupedPlacedItems))
-                        sessionStorage.setItem("needsNoshi", JSON.stringify(false))
-                        sessionStorage.setItem("needsBag", JSON.stringify(selectedBag.qty > 0))
-                        sessionStorage.setItem("selectedBag", JSON.stringify(selectedBag))
-                        router.push('/confirm')
-                      }}
-                      disabled={hasOverlap}
-                      title={hasOverlap ? '商品が重なっています：確認できません' : undefined}
-                    >
-                      確認
-                    </Button>
-
-                  </div>
-
-                  {/* 上限金額設定（デスクトップ） */}
-                  <div className="pt-3">
-                    <div className="flex items-center gap-2 flex-nowrap">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="上限額（円）を入力"
-                        value={priceLimitStr}
-                        onChange={(e) => setPriceLimitStr(e.target.value)}
-                        className="flex-1 min-w-0 p-2 border rounded text-sm"
-                      />
-                      <button onClick={applyPriceLimit} className="px-3 py-2 bg-[var(--color-indigo)] text-white rounded text-sm whitespace-nowrap">設定</button>
-                      <button onClick={clearPriceLimit} className="px-3 py-2 border rounded text-sm whitespace-nowrap">クリア</button>
-                    </div>
-                    {priceLimit !== null && (
-                      <div className="mt-2 text-sm">
-                        {remainingAmount !== null && remainingAmount >= 0 ? (
-                          <div className="text-green-600">残り: {remainingAmount.toLocaleString()}円</div>
-                        ) : (
-                          <div className="text-red-600">超過: {Math.abs(remainingAmount || 0).toLocaleString()}円</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                </div>
-              </div>
-
-              {/* 配置済み商品の詳細リスト */}
-              <div className="mb-4 bg-white rounded-sm border border-gray-100 shadow-sm p-4 overflow-auto">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">詰め合わせ内訳</h3>
-                {groupedPlacedItems.length === 0 ? (
-                  <p className="text-sm text-gray-500">和菓子が配置されていません</p>
-                ) : (
-                  <div className="space-y-3">
-                    {groupedPlacedItems.map((g) => (
-                      <div key={g.itemId || g.name} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {g.imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={g.imageUrl} alt={g.name} className="w-10 h-10 object-cover rounded" />
-                          ) : (
-                            <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-sm text-gray-400">?</div>
-                          )}
-                          <div>
-                            <div className="text-sm font-medium text-gray-800">{g.name}</div>
-                            <div className="text-xs text-gray-500">単価: {g.price?.toLocaleString() || 0}円</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium">{g.qty}個</div>
-                          <div className="text-xs text-gray-500">小計: {(g.price * g.qty).toLocaleString()}円</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            </div>            
 
             {/* 和菓子選択（右端） */}
-            <div className="flex flex-col min-h-[calc(100vh-140px)] w-64 flex-shrink-0">
+            <div className="flex flex-col min-h-[calc(100vh-140px)] w-56 xl:w-64 flex-shrink-0">
               <div ref={selectionAreaRef} className="flex-1">
                 <SelectionArea
                   placedItems={placedItems}
                   setPlacedItems={setPlacedItems}
                   inventoryData={inventoryData}
                   selectedStoreId={selectedStoreId}
-                  //追加
-                  selectedBag={selectedBag}
-                  setSelectedBag={setSelectedBag}
                 />
               </div>
             </div>
-              
-              {/*
-              <div ref={selectionAreaRef} className="flex-1">
-                <SelectionArea
-                  placedItems={placedItems}
-                  setPlacedItems={setPlacedItems}
-                  inventoryData={inventoryData}
-                  selectedStoreId={selectedStoreId}
-                />
-              </div>
-              */}
 
           </div>
         </main>
 
         {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} />}
+
+        {/* 選択中モーダル（仮） */}
+        {isSelectionModalOpen && (
+          <SelectItemModal
+            onClose={() => setIsSelectionModalOpen(false)}
+            items={groupedPlacedItems as Array<{
+              itemId?: string
+              name: string
+              price: number
+              imageUrl?: string
+              qty: number
+            }>}
+            totalPrice={groupedPlacedItems.reduce((total, item) => total + item.price * item.qty, 0)}
+          />
+        )}
+
         {isSettingsOpen && (
           <InfoSettingsModal
             settings={infoSettings}
@@ -857,7 +826,6 @@ export default function WagashiSimulatorContent({
           currentBoxSize={boxSize}
           currentBoxType={selectedBoxType}
         />
-
 
       </div>
     </TooltipProvider>

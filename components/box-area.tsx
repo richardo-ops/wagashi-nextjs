@@ -113,9 +113,12 @@ export default function BoxArea({
       
       // デスクトップ（lg以上）
       if (viewportWidth >= 1024) {
+        // 右側2カラムや余白分を差し引いた、詰め合わせエリアの安全な最大幅
+        const reservedWidth = 72 * 4 + 56 * 4 + 16 * 2 + 24 * 2
+        const availableWidth = Math.max(420, viewportWidth - reservedWidth)
         return {
-          maxWidth: 720,
-          maxHeight: 600,
+          maxWidth: Math.min(680, availableWidth),
+          maxHeight: Math.min(560, Math.floor(viewportHeight * 0.6)),
         }
       }
       // タブレット（md以上）
@@ -1189,13 +1192,14 @@ export default function BoxArea({
 
   return (
     <div className="flex-1 overflow-visible w-full">
+      {/* 余白 */}
       <div className="mb-3 sm:mb-4">
         <h2 className="text-lg sm:text-xl font-medium text-[var(--color-indigo)] tracking-wide flex items-center">
           <span className="inline-block w-1 h-5 sm:h-6 bg-[var(--color-indigo)] mr-2"></span>
           詰め合わせ箱
         </h2>
         <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
-          <span>サイズ: {boxSize} ({boxSize.split('x')[0]}cm×{boxSize.split('x')[1]}cm)</span>
+          <span>サイズ: ({boxSize.split('x')[0]}cm×{boxSize.split('x')[1]}cm)</span>
         </div>
       </div>
       <div className="flex justify-center overflow-visible w-full">

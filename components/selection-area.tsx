@@ -215,10 +215,6 @@ const getFilteredSweets = (category: string) => {
   console.log("検索語:", searchTerm)
   console.log("フィルタリング後(アクティブタブ)の商品数:", filteredForActiveTab.length)
 
-  // 在庫切れの和菓子の数を取得
-  const outOfStockCount = filteredForActiveTab.filter((sweet) => !sweet.inStock).length
-  const totalCount = filteredForActiveTab.length
-
   return (
     <div className="w-full lg:w-80 bg-white p-3 sm:p-4 rounded-sm shadow-md flex flex-col h-full border border-[var(--color-indigo-light)]">
       
@@ -331,15 +327,7 @@ const getFilteredSweets = (category: string) => {
             )}
           </div>
 
-          {/* 在庫状況の表示 */}
-          {activeTab !== "仕切り" && (
-            <div className="mt-2 mb-1 text-xs text-gray-500 flex justify-between items-center">
-              <span>
-                在庫あり: {totalCount - outOfStockCount}/{totalCount}
-              </span>
-              {outOfStockCount > 0 && <span className="text-red-500">在庫切れ: {outOfStockCount}種</span>}
-            </div>
-          )}
+          
 
           <div className="flex-1 overflow-hidden mt-2">
             {activeTab && categories
