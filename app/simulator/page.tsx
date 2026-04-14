@@ -37,6 +37,7 @@ export default function WagashiSimulator() {
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [selectedBoxType, setSelectedBoxType] = useState<BoxType | null>(null)
+  const [isInitialBoxResolved, setIsInitialBoxResolved] = useState(false)
   
   // カスタマーコードモーダルの状態
   const [isCustomerCodeModalOpen, setIsCustomerCodeModalOpen] = useState(false)
@@ -73,35 +74,44 @@ export default function WagashiSimulator() {
   })
 
   useEffect(() => {
-    // 選択された店舗IDを取得
-    const storeId = localStorage.getItem("selectedStoreId")
-    if (!storeId) {
-      // 店舗が選択されていない場合は店舗選択画面に戻る
-      router.push("/store-selection")
-      return
-    }
-    setSelectedStoreId(storeId)
-    
-    // 店舗名を取得
-    fetchStoreName(storeId)
-    
-    // 初期の箱タイプを設定
-    fetchInitialBoxType()
-    
-    // 読み込まれたレイアウトがあるかチェック
-    const loadedLayout = localStorage.getItem("loadedLayout")
-    if (loadedLayout) {
-      try {
-        const data = JSON.parse(loadedLayout)
-        setBoxSize(data.boxSize)
-        setPlacedItems(data.placedItems)
-        setInfoSettings(data.infoSettings || infoSettings)
-        localStorage.removeItem("loadedLayout") // 使用後は削除
-        toast.success("保存されたレイアウトを読み込みました")
-      } catch (error) {
-        console.error("Failed to load saved layout:", error)
+    const initialize = async () => {
+      // 選択された店舗IDを取得
+      const storeId = localStorage.getItem("selectedStoreId")
+      if (!storeId) {
+        // 店舗が選択されていない場合は店舗選択画面に戻る
+        router.push("/store-selection")
+        return
       }
+
+      setSelectedStoreId(storeId)
+
+      // 店舗名を取得
+      fetchStoreName(storeId)
+
+      // 読み込まれたレイアウトがある場合は、それを優先して初期箱取得をスキップ
+      const loadedLayout = localStorage.getItem("loadedLayout")
+      if (loadedLayout) {
+        try {
+          const data = JSON.parse(loadedLayout)
+          setBoxSize(data.boxSize)
+          setPlacedItems(data.placedItems)
+          setInfoSettings(data.infoSettings || infoSettings)
+          localStorage.removeItem("loadedLayout") // 使用後は削除
+          toast.success("保存されたレイアウトを読み込みました")
+        } catch (error) {
+          console.error("Failed to load saved layout:", error)
+        } finally {
+          setIsInitialBoxResolved(true)
+        }
+        return
+      }
+
+      // 初期の箱タイプを設定（完了まで描画しない）
+      await fetchInitialBoxType()
+      setIsInitialBoxResolved(true)
     }
+
+    initialize()
   }, [router])
 
   const fetchStoreName = async (storeId: string) => {
@@ -274,6 +284,14 @@ export default function WagashiSimulator() {
   // 店舗が選択されていない場合は何も表示しない
   if (!selectedStoreId) {
     return null
+  }
+
+  if (!isInitialBoxResolved) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-600">
+        読み込み中...
+      </div>
+    )
   }
 
   // メンテナンスモードが有効で、読み込み完了後の場合はメンテナンス画面を表示
