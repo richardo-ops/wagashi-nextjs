@@ -200,7 +200,7 @@ export default function PlacedItemComponent({
       {...listeners}
       {...attributes}
       data-testid="placed-item"
-      className={`absolute cursor-move placed-item ${isDragging ? "opacity-50" : "opacity-100"} ${
+      className={`absolute cursor-move select-none placed-item ${isDragging ? "opacity-50" : "opacity-100"} ${
         item.isLocked ? "cursor-not-allowed" : ""
       } ${isAnimating ? "z-30" : ""} ${isNew ? "placed-item-enter placed-item-enter-active" : ""}`}
       style={{
@@ -210,11 +210,19 @@ export default function PlacedItemComponent({
         height: item.height * cellSize,
         zIndex: item.type === "divider" ? 25 : 20, // 仕切りのzIndexを和菓子よりも高く設定
         touchAction: "none",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+      }}
+      onMouseDown={(e) => {
+        if (e.button === 0) {
+          e.preventDefault()
+        }
       }}
       onContextMenu={handleContextMenu}
       //ダブルクリックでコンテキストメニュー表示
       onDoubleClick={(e) => {
         e.preventDefault()
+        e.stopPropagation()
         onContextMenu(e)
       }}
       tabIndex={0}
