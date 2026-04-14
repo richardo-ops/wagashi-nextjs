@@ -9,22 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Edit, Trash2, Package, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import type { BoxType, BoxSize } from "@/types/types"
-
-const boxSizeOptions: BoxSize[] = [
-  "22x22",
-  "25.5x22",
-  "28.5x22",
-  "32.5x22",
-  "35x22",
-  "37.5x22",
-  "39x22",
-  "42x22",
-  "45x22"
-]
+import type { BoxType } from "@/types/types"
 
 export default function BoxTypesPage() {
   const [boxTypes, setBoxTypes] = useState<BoxType[]>([])
@@ -33,7 +20,7 @@ export default function BoxTypesPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingBoxType, setEditingBoxType] = useState<BoxType | null>(null)
   const [formData, setFormData] = useState({
-    size: "" as BoxSize | "",
+    size: "",
     name: "",
     price: "",
     description: "",
@@ -43,6 +30,14 @@ export default function BoxTypesPage() {
   useEffect(() => {
     fetchBoxTypes()
   }, [])
+
+  // サイズ入力を正規化する関数
+  const normalizeBoxSize = (rawSize: string) => {
+    return rawSize
+      .trim()
+      .replace(/[×＊*xXｘＸ]/g, "x")
+      .replace(/\s+/g, "")
+  }
 
   const fetchBoxTypes = async () => {
     try {
@@ -62,8 +57,15 @@ export default function BoxTypesPage() {
   }
 
   const handleCreate = async () => {
-    if (!formData.size || !formData.name || !formData.price) {
+    const normalizedSize = normalizeBoxSize(formData.size)
+
+    if (!normalizedSize || !formData.name || !formData.price) {
       toast.error("必須項目を入力してください")
+      return
+    }
+
+    if (!/^\d+(\.\d+)?x\d+(\.\d+)?$/.test(normalizedSize)) {
+      toast.error("サイズは「幅x高さ」の形式で入力してください（例: 22x22）")
       return
     }
 
@@ -73,7 +75,10 @@ export default function BoxTypesPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          size: normalizedSize,
+        }),
       })
 
       if (response.ok) {
@@ -172,29 +177,9 @@ export default function BoxTypesPage() {
     })
   }
 
-  const getSizeLabel = (size: BoxSize) => {
-    switch (size) {
-      case "22x22":
-        return "22×22cm"
-      case "25.5x22":
-        return "25.5×22cm"
-      case "28.5x22":
-        return "28.5×22cm"
-      case "32.5x22":
-        return "32.5×22cm"
-      case "35x22":
-        return "35×22cm"
-      case "37.5x22":
-        return "37.5×22cm"
-      case "39x22":
-        return "39×22cm"
-      case "42x22":
-        return "42×22cm"
-      case "45x22":
-        return "45×22cm"
-      default:
-        return size
-    }
+  const getSizeLabel = (size: string) => {
+    if (!size) return ""
+    return `${size.replace("x", "×")}cm`
   }
 
   if (loading) {
@@ -227,19 +212,13 @@ export default function BoxTypesPage() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="size">サイズ *</Label>
-                <Select
+                <Input
+                  id="size"
                   value={formData.size}
-                  onValueChange={(value) => setFormData({ ...formData, size: value as BoxSize })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="サイズを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {boxSizeOptions.map((size) => (
-                      <SelectItem key={size} value={size}>{getSizeLabel(size)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(e) => setFormData({ ...formData, size: normalizeBoxSize(e.target.value) })}
+                  placeholder="例: 22x22"
+                />
+                <p className="text-xs text-gray-500 mt-1">形式: 幅x高さ（例: 25.5x22）</p>
               </div>
               <div>
                 <Label htmlFor="name">名前 *</Label>
@@ -359,7 +338,7 @@ export default function BoxTypesPage() {
             <div>
               <Label>サイズ</Label>
               <div className="p-2 bg-gray-100 rounded">
-                {getSizeLabel(formData.size as BoxSize)}
+                {getSizeLabel(formData.size)}
               </div>
             </div>
             <div>

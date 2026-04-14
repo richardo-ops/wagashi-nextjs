@@ -116,27 +116,34 @@ export default function WagashiSimulator() {
     }
   }
 
+  // 初期の箱タイプを設定する関数
   const fetchInitialBoxType = async () => {
     try {
       const response = await fetch("/api/box-types")
       if (response.ok) {
         const boxTypes = await response.json()
-        // 優先: MX9 (最大箱, 45x22) をデフォルトで選択する
-        const preferredBoxType = boxTypes.find((bt: BoxType) => bt.size === '45x22' || bt.name === 'MX9')
-        if (preferredBoxType) {
-          setSelectedBoxType(preferredBoxType)
-          setBoxSize(preferredBoxType.size)
-        } else {
-          // 次に現在の boxSize に合致するものを探す
-          const currentBoxType = boxTypes.find((bt: BoxType) => bt.size === boxSize)
-          if (currentBoxType) {
-            setSelectedBoxType(currentBoxType)
-          } else if (boxTypes.length > 0) {
-            // 最後に一覧の先頭をフォールバックとして選択
-            const firstBoxType = boxTypes[0]
-            setSelectedBoxType(firstBoxType)
-            setBoxSize(firstBoxType.size)
+        if (boxTypes.length > 0) {
+          const getBoxSizeScore = (size: BoxType["size"]) => {
+            const [width, height] = size.split("x").map(Number)
+            return { width, height }
           }
+
+          const largestBoxType = boxTypes.reduce((largest: BoxType, current: BoxType) => {
+            const largestScore = getBoxSizeScore(largest.size)
+            const currentScore = getBoxSizeScore(current.size)
+
+            if (
+              currentScore.width > largestScore.width ||
+              (currentScore.width === largestScore.width && currentScore.height > largestScore.height)
+            ) {
+              return current
+            }
+
+            return largest
+          }, boxTypes[0])
+
+          setSelectedBoxType(largestBoxType)
+          setBoxSize(largestBoxType.size)
         }
       }
     } catch (error) {

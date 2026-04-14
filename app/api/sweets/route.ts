@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { compareJapaneseStrings } from "@/lib/utils"
 import type { SweetItem } from "@/types/types"
+import { getPublicCompanyContext } from "@/lib/company-session"
 
 export async function GET(request: Request) {
   try {
@@ -11,6 +12,14 @@ export async function GET(request: Request) {
     if (!storeId) {
       return new NextResponse(JSON.stringify({ error: "Store ID is required" }), {
         status: 400,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    const context = await getPublicCompanyContext()
+    if (!context) {
+      return new NextResponse(JSON.stringify({ error: "Authentication required" }), {
+        status: 401,
         headers: { "Content-Type": "application/json" },
       })
     }
@@ -26,7 +35,8 @@ export async function GET(request: Request) {
         }
       },
       where: {
-        isActive: true
+        isActive: true,
+        companyId: context.company.id,
       }
     })
 

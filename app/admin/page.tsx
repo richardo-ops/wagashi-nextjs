@@ -1,13 +1,19 @@
 import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Package, FolderOpen, BarChart3, Users } from 'lucide-react'
+import { getCompanyContext } from '@/lib/company-session'
 
 export default async function AdminDashboard() {
+  const context = await getCompanyContext()
+  if (!context) {
+    return null
+  }
+
   const [productCount, categoryCount, stockCount, userCount] = await Promise.all([
-    prisma.product.count(),
-    prisma.category.count(),
-    prisma.stock.count(),
-    prisma.adminUser.count(),
+    prisma.product.count({ where: { companyId: context.company.id } }),
+    prisma.category.count({ where: { companyId: context.company.id } }),
+    prisma.stock.count({ where: { companyId: context.company.id } }),
+    prisma.adminUser.count({ where: { companyId: context.company.id } }),
   ])
 
   const stats = [

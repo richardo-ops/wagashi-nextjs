@@ -32,6 +32,17 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        const store = await (prisma as any).store.findUnique({
+            where: { id: storeId }
+        })
+
+        if (!store) {
+            return NextResponse.json(
+                { error: "店舗が見つかりません" },
+                { status: 404 }
+            )
+        }
+
         // ユニークなカスタマーコードを生成
         let customerCode = ""
         let isUnique = false
@@ -62,6 +73,7 @@ export async function POST(request: NextRequest) {
         const savedLayout = await (prisma as any).savedLayout.create({
             data: {
                 customerCode,
+                companyId: store.companyId,
                 storeId,
                 storeName,
                 boxSize,

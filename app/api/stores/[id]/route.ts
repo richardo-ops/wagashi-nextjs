@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getPublicCompanyContext } from "@/lib/company-session"
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const context = await getPublicCompanyContext()
+    if (!context) {
+      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
+    }
+
     const store = await prisma.store.findUnique({
       where: {
         id: params.id,
-        isActive: true
+        isActive: true,
+        companyId: context.company.id,
       }
     })
 

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
 import { prisma } from "@/lib/prisma"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { getCompanyContext } from "@/lib/company-session"
 
 // 箱タイプ詳細取得
 export async function GET(
@@ -9,8 +8,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
     }
 
@@ -20,7 +19,7 @@ export async function GET(
       },
     })
 
-    if (!boxType) {
+    if (!boxType || boxType.companyId !== context.company.id) {
       return NextResponse.json(
         { error: "箱タイプが見つかりません" },
         { status: 404 }
@@ -43,8 +42,8 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
     }
 
@@ -63,6 +62,11 @@ export async function PUT(
         { error: "価格は0以上の整数で入力してください" },
         { status: 400 }
       )
+    }
+
+    const currentBoxType = await prisma.boxType.findUnique({ where: { id: params.id } })
+    if (!currentBoxType || currentBoxType.companyId !== context.company.id) {
+      return NextResponse.json({ error: "箱タイプが見つかりません" }, { status: 404 })
     }
 
     const boxType = await prisma.boxType.update({
@@ -93,9 +97,14 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
+    }
+
+    const currentBoxType = await prisma.boxType.findUnique({ where: { id: params.id } })
+    if (!currentBoxType || currentBoxType.companyId !== context.company.id) {
+      return NextResponse.json({ error: "箱タイプが見つかりません" }, { status: 404 })
     }
 
     await prisma.boxType.delete({

@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       data: {
         storeId: savedLayout.storeId,
         storeName: savedLayout.storeName,
+        companyId: savedLayout.companyId,
         boxSize: savedLayout.boxSize,
         placedItems: savedLayout.layoutData,
         infoSettings: savedLayout.infoSettings,

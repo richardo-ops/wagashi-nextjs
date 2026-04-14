@@ -674,3 +674,9 @@ openssl s_client -connect aws-0-ap-northeast-1.pooler.supabase.com:5432 -brief <
 ## ライセンス
 
 このプロジェクトはMITライセンスの下で公開されています。
+
+## TO DO List
+
+自動化の仕組みの確立
+電光掲示板に商品一覧を表示、客が商品をおして詰め合わせ作成
+自動レジに送信、キャッチして中で詰める

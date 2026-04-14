@@ -3,10 +3,10 @@
 import type React from "react"
 
 // 既存のインポート
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { flushSync } from "react-dom"
 import { useDndMonitor, useDroppable } from "@dnd-kit/core"
-import type { BoxSize, PlacedItem, SweetItem } from "@/types/types"
+import type { BoxSize, BoxType, PlacedItem, SweetItem } from "@/types/types"
 import PlacedItemComponent from "./placed-item"
 import ContextMenu from "./context-menu"
 import DividerResizeModal from "./divider-resize-modal"
@@ -21,6 +21,7 @@ import { fetchSweets } from "@/services/api-service"
 // BoxAreaProps インターフェース
 interface BoxAreaProps {
   boxSize: BoxSize
+  activeBoxSize?: BoxSize
   placedItems: PlacedItem[]
   setPlacedItems: React.Dispatch<React.SetStateAction<PlacedItem[]>>
   infoSettings: InfoDisplaySettings
@@ -33,6 +34,7 @@ interface BoxAreaProps {
 // BoxArea 関数
 export default function BoxArea({
   boxSize,
+  activeBoxSize,
   placedItems,
   setPlacedItems,
   infoSettings,
@@ -57,11 +59,51 @@ export default function BoxArea({
 
   // sweetsデータを状態として管理
   const [sweets, setSweets] = useState<SweetItem[]>([])
+  const [boxTypes, setBoxTypes] = useState<BoxType[]>([])
 
 
 
   // 仕切り長さ調整用の状態
   const [resizingDivider, setResizingDivider] = useState<PlacedItem | null>(null)
+
+  const currentBoxLengthCm = Number(boxSize.split("x")[0])
+
+  useEffect(() => {
+    const loadBoxTypes = async () => {
+      try {
+        const response = await fetch("/api/box-types")
+        if (!response.ok) {
+          setBoxTypes([])
+          return
+        }
+
+        const data = (await response.json()) as BoxType[]
+        setBoxTypes(data)
+      } catch (error) {
+        console.error("Failed to load box types:", error)
+        setBoxTypes([])
+      }
+    }
+
+    loadBoxTypes()
+  }, [])
+
+  const guideDividerSizesCm = useMemo(() => {
+    const parsedSizes = boxTypes
+      .map((boxType) => Number.parseFloat(boxType.size.split("x")[0]))
+      .filter((size) => Number.isFinite(size) && size > 0)
+
+    const uniqueSizes = Array.from(new Set(parsedSizes)).sort((a, b) => a - b)
+    const largestSize = uniqueSizes[uniqueSizes.length - 1] ?? currentBoxLengthCm
+
+    if (currentBoxLengthCm !== largestSize) {
+      return []
+    }
+
+    return uniqueSizes.filter((size) => size < largestSize)
+  }, [boxTypes, currentBoxLengthCm])
+
+  const shouldShowDynamicGuideDivider = guideDividerSizesCm.length > 0
 
   // 表示上の最大サイズを定義（cm単位の箱サイズに基づいて計算）
   const getMaxDisplaySize = () => {
@@ -71,9 +113,12 @@ export default function BoxArea({
       
       // デスクトップ（lg以上）
       if (viewportWidth >= 1024) {
+        // 右側2カラムや余白分を差し引いた、詰め合わせエリアの安全な最大幅
+        const reservedWidth = 72 * 4 + 56 * 4 + 16 * 2 + 24 * 2
+        const availableWidth = Math.max(420, viewportWidth - reservedWidth)
         return {
-          maxWidth: 720,
-          maxHeight: 600,
+          maxWidth: Math.min(680, availableWidth),
+          maxHeight: Math.min(560, Math.floor(viewportHeight * 0.6)),
         }
       }
       // タブレット（md以上）
@@ -1147,13 +1192,14 @@ export default function BoxArea({
 
   return (
     <div className="flex-1 overflow-visible w-full">
+      {/* 余白 */}
       <div className="mb-3 sm:mb-4">
         <h2 className="text-lg sm:text-xl font-medium text-[var(--color-indigo)] tracking-wide flex items-center">
           <span className="inline-block w-1 h-5 sm:h-6 bg-[var(--color-indigo)] mr-2"></span>
           詰め合わせ箱
         </h2>
         <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
-          <span>サイズ: {boxSize} ({boxSize.split('x')[0]}cm×{boxSize.split('x')[1]}cm)</span>
+          <span>サイズ: ({boxSize.split('x')[0]}cm×{boxSize.split('x')[1]}cm)</span>
         </div>
       </div>
       <div className="flex justify-center overflow-visible w-full">
@@ -1190,97 +1236,23 @@ export default function BoxArea({
             />
           ))}
         </div>
-        {/* MX1–MX8 vertical dividers when showing MX9 (45x22) */}
-        {boxSize === "45x22" && (
+        {/* 最大箱選択時は、DBの箱サイズに対応する仕切り線を描画 */}
+        {shouldShowDynamicGuideDivider && (
           <>
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${22 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${25.5 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${28.5 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${32.5 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${35 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${37.5 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${39 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${42 * 10 * cellSize}px`,
-                top: 0,
-                bottom: 0,
-                width: "0px",
-                borderLeft: "4px solid var(--color-indigo)",
-                zIndex: 20,
-              }}
-            />
+            {guideDividerSizesCm.map((dividerSizeCm) => (
+              <div
+                key={`guide-divider-${dividerSizeCm}`}
+                className="absolute pointer-events-none"
+                style={{
+                  left: `${dividerSizeCm * 10 * cellSize}px`,
+                  top: 0,
+                  bottom: 0,
+                  width: "0px",
+                  borderLeft: "4px solid var(--color-indigo)",
+                  zIndex: 20,
+                }}
+              />
+            ))}
           </>
         )}
 

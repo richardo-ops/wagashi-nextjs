@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
 import { prisma } from "@/lib/prisma"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { getCompanyContext, getPublicCompanyContext } from "@/lib/company-session"
 
 // 箱タイプ一覧取得
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    const context = await getPublicCompanyContext()
+    if (!context) {
+      return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
+    }
 
     const boxTypes = await prisma.boxType.findMany({
-      where: session ? undefined : { isActive: true },
+      where: { companyId: context.company.id },
       orderBy: {
         size: "asc",
       },
@@ -28,8 +30,8 @@ export async function GET() {
 // 箱タイプ作成
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    const context = await getCompanyContext()
+    if (!context) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 })
     }
 
@@ -42,7 +44,10 @@ export async function POST(request: Request) {
       )
     }
 
-    const normalizedSize = String(size).trim()
+    const normalizedSize = String(size)
+      .trim()
+      .replace(/[×＊*xXｘＸ]/g, "x")
+      .replace(/\s+/g, "")
     if (!/^\d+(\.\d+)?x\d+(\.\d+)?$/.test(normalizedSize)) {
       return NextResponse.json(
         { error: "サイズは「幅x高さ」の形式で入力してください（例: 22x22）" },
@@ -59,7 +64,12 @@ export async function POST(request: Request) {
     }
 
     const existingBoxType = await prisma.boxType.findUnique({
-      where: { size: normalizedSize }
+      where: {
+        companyId_size: {
+          companyId: context.company.id,
+          size: normalizedSize,
+        }
+      }
     })
 
     if (existingBoxType) {
@@ -71,6 +81,7 @@ export async function POST(request: Request) {
 
     const boxType = await prisma.boxType.create({
       data: {
+        companyId: context.company.id,
         size: normalizedSize,
         name: String(name).trim(),
         price: numericPrice,

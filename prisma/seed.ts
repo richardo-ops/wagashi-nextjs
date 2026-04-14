@@ -1,10 +1,19 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
-const prisma = new PrismaClient()
+const prisma: any = new PrismaClient()
 
 async function main() {
   console.log('🌱 シードデータの投入を開始します...')
+
+  const company = await prisma.company.upsert({
+    where: { companyId: 'demo-company' },
+    update: { name: 'デモ会社' },
+    create: {
+      companyId: 'demo-company',
+      name: 'デモ会社'
+    }
+  })
 
   // 箱タイプの作成
   const boxTypes = []
@@ -68,9 +77,15 @@ async function main() {
   for (const boxType of boxTypeData) {
     try {
       const createdBoxType = await prisma.boxType.upsert({
-        where: { size: boxType.size },
+        where: {
+          companyId_size: {
+            companyId: company.id,
+            size: boxType.size,
+          }
+        },
         update: {},
         create: {
+          companyId: company.id,
           size: boxType.size,
           name: boxType.name,
           price: boxType.price,
@@ -83,7 +98,12 @@ async function main() {
     } catch (error) {
       console.log(`ℹ️ 箱タイプ「${boxType.name}」は既に存在します`)
       const existingBoxType = await prisma.boxType.findUnique({
-        where: { size: boxType.size }
+        where: {
+          companyId_size: {
+            companyId: company.id,
+            size: boxType.size,
+          }
+        }
       })
       if (existingBoxType) boxTypes.push(existingBoxType)
     }
@@ -100,7 +120,8 @@ async function main() {
         email: 'admin@example.com',
         password: hashedPassword,
         name: '管理者',
-        role: 'super_admin'
+        role: 'super_admin',
+        companyId: company.id
       }
     })
     console.log('✅ 管理者ユーザーを作成しました:', adminUser.email)
@@ -125,9 +146,15 @@ async function main() {
   for (const categoryName of categoryNames) {
     try {
       const category = await prisma.category.upsert({
-        where: { name: categoryName },
+        where: {
+          companyId_name: {
+            companyId: company.id,
+            name: categoryName,
+          }
+        },
         update: {},
         create: {
+          companyId: company.id,
           name: categoryName,
           description: `${categoryName}の和菓子`
         }
@@ -137,7 +164,12 @@ async function main() {
     } catch (error) {
       console.log(`ℹ️ カテゴリー「${categoryName}」は既に存在します`)
       const existingCategory = await prisma.category.findUnique({
-        where: { name: categoryName }
+        where: {
+          companyId_name: {
+            companyId: company.id,
+            name: categoryName,
+          }
+        }
       })
       if (existingCategory) categories.push(existingCategory)
     }
@@ -934,6 +966,7 @@ async function main() {
           storageMethod: product.storageMethod
         },
         create: {
+          companyId: company.id,
           id: product.id,
           name: product.name,
           price: product.price,
@@ -983,7 +1016,12 @@ async function main() {
   for (const store of storeData) {
     try {
       const createdStore = await prisma.store.upsert({
-        where: { id: store.id },
+        where: {
+          companyId_name: {
+            companyId: company.id,
+            name: store.name,
+          }
+        },
         update: {
           name: store.name,
           description: store.description,
@@ -992,6 +1030,7 @@ async function main() {
           isActive: true
         },
         create: {
+          companyId: company.id,
           id: store.id,
           name: store.name,
           description: store.description,
@@ -1017,13 +1056,15 @@ async function main() {
       try {
         await prisma.stock.upsert({
           where: { 
-            productId_storeId: {
+            companyId_productId_storeId: {
+              companyId: company.id,
               productId: product.id,
               storeId: store.id
             }
           },
           update: {},
           create: {
+            companyId: company.id,
             productId: product.id,
             storeId: store.id,
             quantity: Math.floor(Math.random() * 50) + 10 // 10-60個のランダム在庫

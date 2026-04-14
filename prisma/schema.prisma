@@ -11,8 +11,27 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model Company {
+  id          String   @id @default(cuid())
+  companyId   String   @unique
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  adminUsers  AdminUser[]
+  categories  Category[]
+  products    Product[]
+  stores      Store[]
+  stocks      Stock[]
+  boxTypes    BoxType[]
+  savedLayouts SavedLayout[]
+
+  @@map("companies")
+}
+
 model AdminUser {
   id        String   @id @default(cuid())
+  companyId String
   email     String   @unique
   password  String
   name      String
@@ -20,23 +39,29 @@ model AdminUser {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   @@map("admin_users")
 }
 
 model Category {
   id          String   @id @default(cuid())
-  name        String   @unique
+  companyId   String
+  name        String
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   products Product[]
 
+  @@unique([companyId, name])
   @@map("categories")
 }
 
 model Product {
   id                String   @id @default(cuid())
+  companyId         String
   name              String
   price             Int      // 価格（円）
   categoryId        String
@@ -55,6 +80,7 @@ model Product {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   stocks   Stock[]
 
@@ -63,7 +89,8 @@ model Product {
 
 model Store {
   id          String   @id @default(cuid())
-  name        String   @unique
+  companyId   String
+  name        String
   description String?
   address     String?
   phone       String?
@@ -71,30 +98,35 @@ model Store {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   stocks       Stock[]
   savedLayouts SavedLayout[]
 
+  @@unique([companyId, name])
   @@map("stores")
 }
 
 model Stock {
   id        String   @id @default(cuid())
+  companyId String
   productId String
   storeId   String
   quantity  Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
-  @@unique([productId, storeId])
+  @@unique([companyId, productId, storeId])
   @@map("stocks")
 }
 
 model BoxType {
   id          String   @id @default(cuid())
-  size        String   @unique // "22x22", "25.5x22", "28.5x22", "32.5x22", "35x22", "37.5x22", "39x22", "42x22", "45x22"
+  companyId   String
+  size        String   // "22x22", "25.5x22", "28.5x22", "32.5x22", "35x22", "37.5x22", "39x22", "42x22", "45x22"
   name        String   // "MX1", "MX2", "MX3", "MX4", "MX5", "MX6", "MX7", "MX8", "MX9"
   price       Int      // 箱の価格（円）
   description String?  // 箱の説明
@@ -102,13 +134,16 @@ model BoxType {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   savedLayouts SavedLayout[]
 
+  @@unique([companyId, size])
   @@map("box_types")
 }
 
 model SavedLayout {
   id           String   @id @default(cuid())
+  companyId    String
   customerCode String   @unique
   storeId      String
   storeName    String
@@ -120,6 +155,7 @@ model SavedLayout {
   updatedAt    DateTime @updatedAt
   expiresAt    DateTime // 有効期限（30日後など）
 
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   store   Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   boxType BoxType? @relation(fields: [boxTypeId], references: [id], onDelete: SetNull)
 

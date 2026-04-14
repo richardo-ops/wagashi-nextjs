@@ -2,16 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 // 管理者一覧取得
 export async function GET() {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     if (!session) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
+    const company = await prisma.company.findUnique({
+      where: { companyId: session.user.companyId },
+    })
+
+    if (!company) {
+      return NextResponse.json({ error: '会社情報が見つかりません' }, { status: 404 })
+    }
+
     const users = await prisma.adminUser.findMany({
+      where: { companyId: company.id },
       select: {
         id: true,
         email: true,
@@ -32,9 +42,17 @@ export async function GET() {
 // 管理者作成
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     if (!session) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+    }
+
+    const company = await prisma.company.findUnique({
+      where: { companyId: session.user.companyId },
+    })
+
+    if (!company) {
+      return NextResponse.json({ error: '会社情報が見つかりません' }, { status: 404 })
     }
 
     const body = await request.json()
@@ -61,7 +79,8 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         name,
-        role
+        role,
+        companyId: company.id,
       },
       select: {
         id: true,

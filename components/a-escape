@@ -1,0 +1,105 @@
+<div className="flex flex-col min-h-[calc(100vh-140px)] w-72 xl:w-80 flex-shrink-0">
+              {/* 合計金額表示（デスクトップ） */}
+              <div className="mb-4 p-4 bg-white rounded-sm border border-[var(--color-indigo-light)] shadow-sm">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">和菓子:</span>
+                    <span>
+                      {placedItems
+                        .filter((item) => item.type === "sweet" && item.price)
+                        .reduce((total, item) => total + (item.price || 0), 0)
+                        .toLocaleString()}円
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">箱代 ({effectiveBoxDef ? effectiveBoxDef.name : selectedBoxType ? selectedBoxType.name : boxSize}):</span>
+                    <span>{effectiveBoxDef ? effectiveBoxDef.price.toLocaleString() : selectedBoxType ? selectedBoxType.price.toLocaleString() : 0}円</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between">
+                    <span className="text-lg font-medium text-[var(--color-indigo)]">合計:</span>
+                    <span className="text-xl font-bold text-[var(--color-indigo)]" data-testid="total-price">
+                      {calculateTotalPrice().toLocaleString()}円
+                    </span>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={`font-bold px-4 py-1 rounded bg-[var(--color-indigo-light)] border border-[var(--color-indigo)] text-white transition-colors text-base shadow ${hasOverlap ? 'opacity-60 cursor-not-allowed hover:bg-[var(--color-indigo-light)]' : 'hover:bg-[var(--color-indigo)] hover:text-white'}`}
+                      onClick={() => {
+                        if (hasOverlap) return
+                        sessionStorage.setItem("placedItems", JSON.stringify(placedItems))
+                        sessionStorage.setItem("boxSize", boxSize)
+                        sessionStorage.setItem("selectedBoxType", JSON.stringify(selectedBoxType))
+                        sessionStorage.setItem("products", JSON.stringify(groupedPlacedItems))
+                        sessionStorage.setItem("needsNoshi", JSON.stringify(false))
+                        sessionStorage.setItem("needsBag", JSON.stringify(selectedBag.qty > 0))
+                        sessionStorage.setItem("selectedBag", JSON.stringify(selectedBag))
+                        router.push('/confirm')
+                      }}
+                      disabled={hasOverlap}
+                      title={hasOverlap ? '商品が重なっています：確認できません' : undefined}
+                    >
+                      確認
+                    </Button>
+
+                  </div>
+
+                  {/* 上限金額設定（デスクトップ） */}
+                  <div className="pt-3">
+                    <div className="flex items-center gap-2 flex-nowrap">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="上限額（円）を入力"
+                        value={priceLimitStr}
+                        onChange={(e) => setPriceLimitStr(e.target.value)}
+                        className="flex-1 min-w-0 p-2 border rounded text-sm"
+                      />
+                      <button onClick={applyPriceLimit} className="px-3 py-2 bg-[var(--color-indigo)] text-white rounded text-sm whitespace-nowrap">設定</button>
+                      <button onClick={clearPriceLimit} className="px-3 py-2 border rounded text-sm whitespace-nowrap">クリア</button>
+                    </div>
+                    {priceLimit !== null && (
+                      <div className="mt-2 text-sm">
+                        {remainingAmount !== null && remainingAmount >= 0 ? (
+                          <div className="text-green-600">残り: {remainingAmount.toLocaleString()}円</div>
+                        ) : (
+                          <div className="text-red-600">超過: {Math.abs(remainingAmount || 0).toLocaleString()}円</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+
+              {/* 配置済み商品の詳細リスト */}
+              <div className="mb-4 bg-white rounded-sm border border-gray-100 shadow-sm p-4 overflow-auto">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">詰め合わせ内訳</h3>
+                {groupedPlacedItems.length === 0 ? (
+                  <p className="text-sm text-gray-500">和菓子が配置されていません</p>
+                ) : (
+                  <div className="space-y-3">
+                    {groupedPlacedItems.map((g) => (
+                      <div key={g.itemId || g.name} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {g.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={g.imageUrl} alt={g.name} className="w-10 h-10 object-cover rounded" />
+                          ) : (
+                            <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-sm text-gray-400">?</div>
+                          )}
+                          <div>
+                            <div className="text-sm font-medium text-gray-800">{g.name}</div>
+                            <div className="text-xs text-gray-500">単価: {g.price?.toLocaleString() || 0}円</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium">{g.qty}個</div>
+                          <div className="text-xs text-gray-500">小計: {(g.price * g.qty).toLocaleString()}円</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
