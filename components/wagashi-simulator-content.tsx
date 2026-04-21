@@ -135,6 +135,9 @@ export default function WagashiSimulatorContent({
   const [isDesktopLayout, setIsDesktopLayout] = useState(false)
   //選択中モーダルの状態
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false)
+  const [isAllergyFilterOpen, setIsAllergyFilterOpen] = useState(false)
+  const [allergyOptions, setAllergyOptions] = useState<string[]>([])
+  const [selectedAllergyFilters, setSelectedAllergyFilters] = useState<string[]>([])
   const [companyMaxBoxSize, setCompanyMaxBoxSize] = useState<string | null>(null)
   const [companyBoxDefs, setCompanyBoxDefs] = useState<AutoBoxDef[]>(BOX_TYPE_DEFS)
 
@@ -208,6 +211,7 @@ export default function WagashiSimulatorContent({
   const saveLoadRef = useRef<HTMLDivElement>(null)
   const customerCodeSaveRef = useRef<HTMLButtonElement>(null)
   const printRef = useRef<HTMLButtonElement>(null)
+  const allergyPanelRef = useRef<HTMLDivElement>(null)
 
   // 商品変更通知を受け取る
   useEffect(() => {
@@ -223,6 +227,18 @@ export default function WagashiSimulatorContent({
       window.removeEventListener("productUpdate", handleProductUpdate as EventListener)
     }
   }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!isAllergyFilterOpen) return
+      if (allergyPanelRef.current && !allergyPanelRef.current.contains(event.target as Node)) {
+        setIsAllergyFilterOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [isAllergyFilterOpen])
 
   // 在庫データを更新する関数
   const handleUpdateInventory = (updatedSweets: SweetItem[]) => {
@@ -251,6 +267,12 @@ export default function WagashiSimulatorContent({
   const handleBoxSelection = (newBoxSize: BoxSize, boxType: BoxType) => {
     setBoxSize(newBoxSize)
     onBoxTypeChange?.(boxType)
+  }
+
+  const toggleAllergyFilter = (allergy: string) => {
+    setSelectedAllergyFilters((prev) =>
+      prev.includes(allergy) ? prev.filter((item) => item !== allergy) : [...prev, allergy]
+    )
   }
 
   // 和菓子が配置されているかチェック
@@ -374,7 +396,7 @@ export default function WagashiSimulatorContent({
   return (
     <TooltipProvider>
       <div className="min-h-screen washi-bg">
-        <header className="bg-[var(--color-indigo)] text-white shadow-md relative overflow-hidden">
+        <header className="bg-[var(--color-indigo)] text-white shadow-md relative overflow-visible">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute inset-0 bg-[url('/pattern-japanese.svg')] bg-repeat"></div>
           </div>
@@ -681,7 +703,56 @@ export default function WagashiSimulatorContent({
                   一覧
                   <span className="hidden xl:inline ml-1">現在の商品</span>
                 </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo-light)] border-[var(--color-indigo-dark)]"
+                  onClick={() => setIsAllergyFilterOpen((prev) => !prev)}
+                >
+                  アレルギー
+                  {selectedAllergyFilters.length > 0 && (
+                    <span className="ml-2 rounded-full bg-white text-[var(--color-indigo)] px-1.5 py-0.5 text-xs">
+                      {selectedAllergyFilters.length}
+                    </span>
+                  )}
+                </Button>
               </div>
+
+              {isAllergyFilterOpen && (
+                <div
+                  ref={allergyPanelRef}
+                  className="absolute right-4 top-full mt-2 z-30 w-72 max-h-80 overflow-y-auto rounded-md border border-[var(--color-indigo-light)] bg-white p-3 shadow-lg"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-[var(--color-indigo)]">除外するアレルギー</p>
+                    <button
+                      type="button"
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                      onClick={() => setSelectedAllergyFilters([])}
+                    >
+                      クリア
+                    </button>
+                  </div>
+
+                  {allergyOptions.length === 0 ? (
+                    <p className="text-xs text-gray-500">表示可能なアレルギー情報がありません</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {allergyOptions.map((allergy) => (
+                        <label key={allergy} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedAllergyFilters.includes(allergy)}
+                            onChange={() => toggleAllergyFilter(allergy)}
+                          />
+                          <span>{allergy}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -743,6 +814,8 @@ export default function WagashiSimulatorContent({
                 setPlacedItems={setPlacedItems}
                 inventoryData={inventoryData}
                 selectedStoreId={selectedStoreId}
+                excludedAllergies={selectedAllergyFilters}
+                onAllergyOptionsChange={setAllergyOptions}
               />
             </div>
             
@@ -842,6 +915,8 @@ export default function WagashiSimulatorContent({
                   setPlacedItems={setPlacedItems}
                   inventoryData={inventoryData}
                   selectedStoreId={selectedStoreId}
+                  excludedAllergies={selectedAllergyFilters}
+                  onAllergyOptionsChange={setAllergyOptions}
                 />
               </div>
             </div>

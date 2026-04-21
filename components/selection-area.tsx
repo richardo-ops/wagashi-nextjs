@@ -17,9 +17,18 @@ interface SelectionAreaProps {
   setPlacedItems: React.Dispatch<React.SetStateAction<PlacedItem[]>>
   inventoryData?: SweetItem[] // 在庫データを受け取るプロパティを追加
   selectedStoreId: string
+  excludedAllergies?: string[]
+  onAllergyOptionsChange?: (options: string[]) => void
 }
 
-export default function SelectionArea({ placedItems, setPlacedItems, inventoryData, selectedStoreId }: SelectionAreaProps) {
+export default function SelectionArea({
+  placedItems,
+  setPlacedItems,
+  inventoryData,
+  selectedStoreId,
+  excludedAllergies = [],
+  onAllergyOptionsChange,
+}: SelectionAreaProps) {
   const [activeTab, setActiveTab] = useState("餅菓子")
   const [sweets, setSweets] = useState<SweetItem[]>([])
   const [dividers, setDividers] = useState<DividerItem[]>([])
@@ -145,6 +154,19 @@ export default function SelectionArea({ placedItems, setPlacedItems, inventoryDa
     }
   }, [])
 
+  useEffect(() => {
+    const options = Array.from(
+      new Set(
+        sweets
+          .flatMap((sweet) => sweet.allergies || [])
+          .map((allergy) => allergy.trim())
+          .filter((allergy) => allergy.length > 0)
+      )
+    ).sort((a, b) => a.localeCompare(b, "ja"))
+
+    onAllergyOptionsChange?.(options)
+  }, [sweets, onAllergyOptionsChange])
+
   // タブのスクロール状態を確認する関数
   const checkScrollPosition = () => {
     if (tabsListRef.current) {
@@ -186,10 +208,17 @@ export default function SelectionArea({ placedItems, setPlacedItems, inventoryDa
 // 指定したカテゴリに対する検索＋カテゴリフィルタを返すヘルパー
 const getFilteredSweets = (category: string) => {
   const term = (searchTerm ?? "").trim().toLowerCase()
+  const blockedAllergies = excludedAllergies.map((allergy) => allergy.trim().toLowerCase()).filter((allergy) => allergy.length > 0)
 
   return sweets.filter((s) => {
     // 在庫が0個の商品は表示しない
     if ((s.stockQuantity ?? 0) <= 0) return false
+
+    if (blockedAllergies.length > 0) {
+      const sweetAllergies = (s.allergies || []).map((allergy) => allergy.trim().toLowerCase())
+      const hasBlockedAllergy = sweetAllergies.some((allergy) => blockedAllergies.includes(allergy))
+      if (hasBlockedAllergy) return false
+    }
 
     // 「全て」ならカテゴリ判定をスキップ（= 全商品が対象）
     const matchCategory = category === "全て" || s.category === category
