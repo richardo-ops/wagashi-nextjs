@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { isSuperAdminRole } from '@/lib/auth-utils'
 
 // 管理者削除
 export async function DELETE(
@@ -14,13 +15,7 @@ export async function DELETE(
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
-    const company = await prisma.company.findUnique({
-      where: { companyId: session.user.companyId },
-    })
-
-    if (!company) {
-      return NextResponse.json({ error: '会社情報が見つかりません' }, { status: 404 })
-    }
+    const superAdmin = isSuperAdminRole(session.user.role)
 
     // 自分自身を削除しようとしている場合は拒否
     if (session.user.id === params.id) {
@@ -35,8 +30,18 @@ export async function DELETE(
       where: { id: params.id }
     })
 
-    if (!user || user.companyId !== company.id) {
+    if (!user) {
       return NextResponse.json({ error: '指定された管理者が存在しません' }, { status: 404 })
+    }
+
+    if (!superAdmin) {
+      const company = await prisma.company.findUnique({
+        where: { companyId: session.user.companyId },
+      })
+
+      if (!company || user.companyId !== company.id) {
+        return NextResponse.json({ error: '指定された管理者が存在しません' }, { status: 404 })
+      }
     }
 
     await prisma.adminUser.delete({

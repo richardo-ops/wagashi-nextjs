@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { isSuperAdminRole } from '@/lib/auth-utils'
 
 // 管理者一覧取得
 export async function GET() {
@@ -12,28 +13,41 @@ export async function GET() {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
-    const company = await prisma.company.findUnique({
-      where: { companyId: session.user.companyId },
-    })
+    const superAdmin = isSuperAdminRole(session.user.role)
+    const company = superAdmin
+      ? null
+      : await prisma.company.findUnique({
+          where: { companyId: session.user.companyId },
+        })
 
-    if (!company) {
+    if (!superAdmin && !company) {
       return NextResponse.json({ error: '会社情報が見つかりません' }, { status: 404 })
     }
 
     const users = await prisma.adminUser.findMany({
-      where: { companyId: company.id },
+      where: superAdmin ? undefined : { companyId: company!.id },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        company: {
+          select: {
+            companyId: true,
+            name: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' }
     })
 
-    return NextResponse.json(users)
+    return NextResponse.json(users.map((user) => ({
+      ...user,
+      companyId: user.company.companyId,
+      companyName: user.company.name,
+    })))
   } catch (error) {
     return NextResponse.json({ error: '管理者の取得に失敗しました' }, { status: 500 })
   }
@@ -57,9 +71,15 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { email, password, name, role = 'admin' } = body
+    const superAdmin = isSuperAdminRole(session.user.role)
+    const normalizedRole = role === 'super-admin' && superAdmin ? 'super-admin' : 'admin'
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: 'メールアドレス、パスワード、名前は必須です' }, { status: 400 })
+    }
+
+    if (role === 'super-admin' && !superAdmin) {
+      return NextResponse.json({ error: 'スーパー管理者のみスーパー管理者を作成できます' }, { status: 403 })
     }
 
     // メールアドレスの重複チェック
@@ -79,7 +99,7 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         name,
-        role,
+        role: normalizedRole,
         companyId: company.id,
       },
       select: {
