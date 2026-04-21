@@ -11,6 +11,7 @@ import InventorySettingsModal from "@/components/inventory-settings-modal"
 import ProductUpdateModal from "@/components/product-update-modal"
 import PrintModal from "@/components/print-modal"
 import BoxSelectionModal from "@/components/box-selection-modal"
+import { ALLERGY_OPTIONS } from "@/data/allergy-options"
 import type { BoxSize, PlacedItem, SweetItem, BoxType } from "@/types/types"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -136,7 +137,6 @@ export default function WagashiSimulatorContent({
   //選択中モーダルの状態
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false)
   const [isAllergyFilterOpen, setIsAllergyFilterOpen] = useState(false)
-  const [allergyOptions, setAllergyOptions] = useState<string[]>([])
   const [selectedAllergyFilters, setSelectedAllergyFilters] = useState<string[]>([])
   const [companyMaxBoxSize, setCompanyMaxBoxSize] = useState<string | null>(null)
   const [companyBoxDefs, setCompanyBoxDefs] = useState<AutoBoxDef[]>(BOX_TYPE_DEFS)
@@ -735,22 +735,18 @@ export default function WagashiSimulatorContent({
                     </button>
                   </div>
 
-                  {allergyOptions.length === 0 ? (
-                    <p className="text-xs text-gray-500">表示可能なアレルギー情報がありません</p>
-                  ) : (
-                    <div className="space-y-1">
-                      {allergyOptions.map((allergy) => (
-                        <label key={allergy} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedAllergyFilters.includes(allergy)}
-                            onChange={() => toggleAllergyFilter(allergy)}
-                          />
-                          <span>{allergy}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
+                  <div className="space-y-1">
+                    {ALLERGY_OPTIONS.map((allergy) => (
+                      <label key={allergy} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedAllergyFilters.includes(allergy)}
+                          onChange={() => toggleAllergyFilter(allergy)}
+                        />
+                        <span>{allergy}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -815,7 +811,6 @@ export default function WagashiSimulatorContent({
                 inventoryData={inventoryData}
                 selectedStoreId={selectedStoreId}
                 excludedAllergies={selectedAllergyFilters}
-                onAllergyOptionsChange={setAllergyOptions}
               />
             </div>
             
@@ -916,7 +911,6 @@ export default function WagashiSimulatorContent({
                   inventoryData={inventoryData}
                   selectedStoreId={selectedStoreId}
                   excludedAllergies={selectedAllergyFilters}
-                  onAllergyOptionsChange={setAllergyOptions}
                 />
               </div>
             </div>

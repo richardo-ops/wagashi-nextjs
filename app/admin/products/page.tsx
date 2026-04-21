@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
+import { ALLERGY_OPTIONS } from '@/data/allergy-options'
 import { Plus, Edit, Trash2, Upload, Search, Image as ImageIcon, X, Store } from 'lucide-react'
 
 interface Category {
@@ -56,12 +57,7 @@ export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   
-  // 代表的なアレルギー項目
-  const allergyOptions = [
-    '小麦', '卵', '乳', '落花生', 'アーモンド', 'あわび', 'いか', 'いくら', 'オレンジ', 'カシューナッツ',
-    'キウイフルーツ', '牛肉', 'くるみ', 'ごま', 'さけ', 'さば', '大豆', '鶏肉', 'バナナ', '豚肉',
-    'まつたけ', 'もも', 'やまいも', 'りんご', 'ゼラチン', 'エビ', 'カニ'
-  ]
+  const allergyOptions = ALLERGY_OPTIONS
   const [formData, setFormData] = useState({
     name: '',
     price: '',
