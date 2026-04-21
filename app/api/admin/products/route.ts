@@ -121,14 +121,22 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // 在庫レコードも作成
-    await prisma.stock.create({
-      data: {
-        companyId: context.company.id,
-        productId: product.id,
-        quantity: 0
-      }
+    // 各店舗の初期在庫レコードを作成
+    const stores = await prisma.store.findMany({
+      where: { companyId: context.company.id },
+      select: { id: true }
     })
+
+    if (stores.length > 0) {
+      await prisma.stock.createMany({
+        data: stores.map((store) => ({
+          companyId: context.company.id,
+          productId: product.id,
+          storeId: store.id,
+          quantity: 0,
+        })),
+      })
+    }
 
     // シミュレーション画面のキャッシュクリアを通知
     try {
@@ -144,6 +152,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(product, { status: 201 })
   } catch (error) {
+    console.error('商品作成エラー:', error)
     return NextResponse.json({ error: '商品の作成に失敗しました' }, { status: 500 })
   }
 } 

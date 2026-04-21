@@ -7,8 +7,8 @@ export default function HomePage() {
   const router = useRouter()
 
   useEffect(() => {
-    // メインページにアクセスした場合は店舗選択画面にリダイレクト
-    router.push("/store-selection")
+    // メインページにアクセスした場合はログイン画面にリダイレクト
+    router.push("/login")
   }, [router])
 
   return null

@@ -11,6 +11,7 @@ import InventorySettingsModal from "@/components/inventory-settings-modal"
 import ProductUpdateModal from "@/components/product-update-modal"
 import PrintModal from "@/components/print-modal"
 import BoxSelectionModal from "@/components/box-selection-modal"
+import { ALLERGY_OPTIONS } from "@/data/allergy-options"
 import type { BoxSize, PlacedItem, SweetItem, BoxType } from "@/types/types"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -23,8 +24,15 @@ import { useRouter } from "next/navigation"
 // 選択中商品表示のモーダル（仮）
 import SelectItemModal from "@/components/select-item-modal"
 
+type AutoBoxDef = {
+  size: number
+  sizeStr: BoxSize
+  name: string
+  price: number
+}
+
 // Box type definitions (size in cm and price)
-const BOX_TYPE_DEFS = [
+const BOX_TYPE_DEFS: AutoBoxDef[] = [
   { size: 22, sizeStr: "22x22", name: "B1", price: 220 },
   { size: 25.5, sizeStr: "25.5x22", name: "B2", price: 220 },
   { size: 28.5, sizeStr: "28.5x22", name: "B3", price: 275 },
@@ -36,13 +44,6 @@ const BOX_TYPE_DEFS = [
   { size: 45, sizeStr: "45x22", name: "B9", price: 385 },
 ]
 
-function getBoxDefForCm(cm: number) {
-  return (
-    BOX_TYPE_DEFS.find(def => cm <= def.size) ||
-    BOX_TYPE_DEFS[BOX_TYPE_DEFS.length - 1]
-  )
-}
-
 function getMaxPlacedCm(items: any[]) {
   return Math.max(
     ...items
@@ -52,10 +53,6 @@ function getMaxPlacedCm(items: any[]) {
   )
 }
 
-function getAutoSelectedBox(items: any[]) {
-  const maxCm = getMaxPlacedCm(items)
-  return getBoxDefForCm(maxCm)
-}
 
 function parseBoxSize(size: string) {
   const [rawWidth, rawHeight] = size.replace(/[×*]/g, "x").split("x")
@@ -139,7 +136,10 @@ export default function WagashiSimulatorContent({
   const [isDesktopLayout, setIsDesktopLayout] = useState(false)
   //選択中モーダルの状態
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false)
+  const [isAllergyFilterOpen, setIsAllergyFilterOpen] = useState(false)
+  const [selectedAllergyFilters, setSelectedAllergyFilters] = useState<string[]>([])
   const [companyMaxBoxSize, setCompanyMaxBoxSize] = useState<string | null>(null)
+  const [companyBoxDefs, setCompanyBoxDefs] = useState<AutoBoxDef[]>(BOX_TYPE_DEFS)
 
   //追加： Next.js のルーター
   const router = useRouter()
@@ -155,7 +155,7 @@ export default function WagashiSimulatorContent({
   }, [])
 
   useEffect(() => {
-    const fetchCompanyMaxBoxSize = async () => {
+    const fetchCompanyBoxTypes = async () => {
       try {
         const response = await fetch("/api/box-types")
         if (!response.ok) return
@@ -163,10 +163,23 @@ export default function WagashiSimulatorContent({
         const boxTypes = (await response.json()) as BoxType[]
         if (!Array.isArray(boxTypes) || boxTypes.length === 0) return
 
-        const maxSize = boxTypes.reduce((max, boxType) => {
-          if (!max) return boxType.size
-          return isSizeGreater(boxType.size, max) ? boxType.size : max
-        }, boxTypes[0].size)
+        const normalizedDefs = boxTypes
+          .map((boxType) => {
+            const parsed = parseBoxSize(boxType.size)
+            return {
+              size: parsed?.width ?? Number.parseFloat(boxType.size.split("x")[0]),
+              sizeStr: boxType.size,
+              name: boxType.name,
+              price: boxType.price,
+            }
+          })
+          .filter((def) => Number.isFinite(def.size) && def.size > 0)
+          .sort((a, b) => a.size - b.size)
+
+        if (normalizedDefs.length === 0) return
+
+        setCompanyBoxDefs(normalizedDefs)
+        const maxSize = normalizedDefs[normalizedDefs.length - 1].sizeStr
 
         setCompanyMaxBoxSize(maxSize)
       } catch (error) {
@@ -174,8 +187,20 @@ export default function WagashiSimulatorContent({
       }
     }
 
-    fetchCompanyMaxBoxSize()
+    fetchCompanyBoxTypes()
   }, [])
+
+  const getBoxDefForCm = (cm: number) => {
+    return (
+      companyBoxDefs.find((def) => cm <= def.size) ||
+      companyBoxDefs[companyBoxDefs.length - 1]
+    )
+  }
+
+  const getAutoSelectedBox = (items: PlacedItem[]) => {
+    const maxCm = getMaxPlacedCm(items)
+    return getBoxDefForCm(maxCm)
+  }
 
   // 要素の参照
   const selectionAreaRef = useRef<HTMLDivElement>(null)
@@ -186,6 +211,7 @@ export default function WagashiSimulatorContent({
   const saveLoadRef = useRef<HTMLDivElement>(null)
   const customerCodeSaveRef = useRef<HTMLButtonElement>(null)
   const printRef = useRef<HTMLButtonElement>(null)
+  const allergyPanelRef = useRef<HTMLDivElement>(null)
 
   // 商品変更通知を受け取る
   useEffect(() => {
@@ -201,6 +227,18 @@ export default function WagashiSimulatorContent({
       window.removeEventListener("productUpdate", handleProductUpdate as EventListener)
     }
   }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!isAllergyFilterOpen) return
+      if (allergyPanelRef.current && !allergyPanelRef.current.contains(event.target as Node)) {
+        setIsAllergyFilterOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [isAllergyFilterOpen])
 
   // 在庫データを更新する関数
   const handleUpdateInventory = (updatedSweets: SweetItem[]) => {
@@ -231,6 +269,12 @@ export default function WagashiSimulatorContent({
     onBoxTypeChange?.(boxType)
   }
 
+  const toggleAllergyFilter = (allergy: string) => {
+    setSelectedAllergyFilters((prev) =>
+      prev.includes(allergy) ? prev.filter((item) => item !== allergy) : [...prev, allergy]
+    )
+  }
+
   // 和菓子が配置されているかチェック
   const hasPlacedItems = placedItems.length > 0
   const isCustomerCodeSaveDisabled = isSavingCustomerCode || !hasPlacedItems
@@ -255,30 +299,38 @@ export default function WagashiSimulatorContent({
   // 選択中の箱（表示用） — B9 を選択している場合は配置位置に応じて実際の箱タイプを決定する
   const getEffectiveBoxDef = () => {
     if (!selectedBoxType) return null
+
+    const parsedSelectedSize = parseBoxSize(selectedBoxType.size)
+    const selectedBoxDef = companyBoxDefs.find((def) => def.sizeStr === selectedBoxType.size) ?? {
+      size: parsedSelectedSize?.width ?? Number.parseFloat(selectedBoxType.size.split("x")[0]),
+      sizeStr: selectedBoxType.size,
+      name: selectedBoxType.name,
+      price: selectedBoxType.price,
+    }
+
     // 企業ごとの最大サイズ箱を選択しているときのみ、配置位置に応じて箱タイプを動的判定
-    const fallbackMaxSize = BOX_TYPE_DEFS[BOX_TYPE_DEFS.length - 1]?.sizeStr
+    const fallbackMaxSize = companyBoxDefs[companyBoxDefs.length - 1]?.sizeStr
     const maxSizeForDynamicCheck = companyMaxBoxSize ?? fallbackMaxSize
-    if (maxSizeForDynamicCheck && selectedBoxType.size === maxSizeForDynamicCheck) {
+    if (maxSizeForDynamicCheck && selectedBoxDef.sizeStr === maxSizeForDynamicCheck) {
       // 動的判定: 配置済み和菓子の右端位置から最も大きい箱定義を選択
       const sweets = placedItems.filter((it) => it.type === "sweet")
-      if (sweets.length === 0) return selectedBoxType
+      if (sweets.length === 0) return selectedBoxDef
       let maxIdx = 0
       sweets.forEach((item) => {
         const centerCm = (item.x + item.width) / 10
         const def = getBoxDefForCm(centerCm)
-        const idx = BOX_TYPE_DEFS.findIndex((d) => d.size === def.size)
+        const idx = companyBoxDefs.findIndex((d) => d.size === def.size)
         if (idx > maxIdx) maxIdx = idx
       })
-      return BOX_TYPE_DEFS[maxIdx]
+      return companyBoxDefs[maxIdx]
     }
-    return selectedBoxType
+    return selectedBoxDef
   }
   const effectiveBoxDef = getEffectiveBoxDef()
 
   const effectiveBoxSize = useMemo<BoxSize>(() => {
     if (!effectiveBoxDef) return boxSize
-    if ("sizeStr" in effectiveBoxDef) return effectiveBoxDef.sizeStr as BoxSize
-    return effectiveBoxDef.size
+    return effectiveBoxDef.sizeStr
   }, [effectiveBoxDef, boxSize])
 
   // 詰め合わせの上限金額（円）を設定する状態
@@ -344,7 +396,7 @@ export default function WagashiSimulatorContent({
   return (
     <TooltipProvider>
       <div className="min-h-screen washi-bg">
-        <header className="bg-[var(--color-indigo)] text-white shadow-md relative overflow-hidden">
+        <header className="bg-[var(--color-indigo)] text-white shadow-md relative overflow-visible">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute inset-0 bg-[url('/pattern-japanese.svg')] bg-repeat"></div>
           </div>
@@ -651,7 +703,52 @@ export default function WagashiSimulatorContent({
                   一覧
                   <span className="hidden xl:inline ml-1">現在の商品</span>
                 </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo-light)] border-[var(--color-indigo-dark)]"
+                  onClick={() => setIsAllergyFilterOpen((prev) => !prev)}
+                >
+                  アレルギー
+                  {selectedAllergyFilters.length > 0 && (
+                    <span className="ml-2 rounded-full bg-white text-[var(--color-indigo)] px-1.5 py-0.5 text-xs">
+                      {selectedAllergyFilters.length}
+                    </span>
+                  )}
+                </Button>
               </div>
+
+              {isAllergyFilterOpen && (
+                <div
+                  ref={allergyPanelRef}
+                  className="absolute right-4 top-full mt-2 z-30 w-72 max-h-80 overflow-y-auto rounded-md border border-[var(--color-indigo-light)] bg-white p-3 shadow-lg"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-[var(--color-indigo)]">除外するアレルギー</p>
+                    <button
+                      type="button"
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                      onClick={() => setSelectedAllergyFilters([])}
+                    >
+                      クリア
+                    </button>
+                  </div>
+
+                  <div className="space-y-1">
+                    {ALLERGY_OPTIONS.map((allergy) => (
+                      <label key={allergy} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedAllergyFilters.includes(allergy)}
+                          onChange={() => toggleAllergyFilter(allergy)}
+                        />
+                        <span>{allergy}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -713,6 +810,7 @@ export default function WagashiSimulatorContent({
                 setPlacedItems={setPlacedItems}
                 inventoryData={inventoryData}
                 selectedStoreId={selectedStoreId}
+                excludedAllergies={selectedAllergyFilters}
               />
             </div>
             
@@ -812,6 +910,7 @@ export default function WagashiSimulatorContent({
                   setPlacedItems={setPlacedItems}
                   inventoryData={inventoryData}
                   selectedStoreId={selectedStoreId}
+                  excludedAllergies={selectedAllergyFilters}
                 />
               </div>
             </div>

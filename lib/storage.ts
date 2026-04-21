@@ -7,12 +7,50 @@ import path from 'path'
 const USE_LOCAL_STORAGE = process.env.USE_LOCAL_DB === 'true'
 const LOCAL_UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads', 'products')
 const LOCAL_BASE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+const SUPABASE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'images'
 
 // ローカルストレージの初期化
 async function ensureLocalStorageDir() {
     if (!existsSync(LOCAL_UPLOAD_DIR)) {
         await mkdir(LOCAL_UPLOAD_DIR, { recursive: true })
     }
+}
+
+function isBucketNotFoundError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') {
+        return false
+    }
+
+    const message = 'message' in error ? String((error as { message?: unknown }).message ?? '') : ''
+    return /bucket not found/i.test(message)
+}
+
+async function ensureSupabaseBucket(): Promise<{ success: boolean; error?: string }> {
+    if (!supabaseAdmin) {
+        return { success: false, error: 'Supabaseクライアントが初期化されていません' }
+    }
+
+    const { data: existingBucket, error: getBucketError } = await supabaseAdmin.storage.getBucket(SUPABASE_BUCKET)
+
+    if (!getBucketError && existingBucket) {
+        return { success: true }
+    }
+
+    if (getBucketError && !isBucketNotFoundError(getBucketError)) {
+        console.error('Supabase getBucket error:', getBucketError)
+        return { success: false, error: 'ストレージバケットの確認に失敗しました' }
+    }
+
+    const { error: createBucketError } = await supabaseAdmin.storage.createBucket(SUPABASE_BUCKET, {
+        public: true,
+    })
+
+    if (createBucketError) {
+        console.error('Supabase createBucket error:', createBucketError)
+        return { success: false, error: 'ストレージバケットの作成に失敗しました' }
+    }
+
+    return { success: true }
 }
 
 // ファイルアップロード
@@ -38,22 +76,43 @@ export async function uploadImage(
                 return { success: false, error: 'Supabaseクライアントが初期化されていません' }
             }
 
-            const { data, error } = await supabaseAdmin.storage
-                .from('images')
-                .upload(`products/${fileName}`, buffer, {
+            const uploadPath = `products/${fileName}`
+            const { error } = await supabaseAdmin.storage
+                .from(SUPABASE_BUCKET)
+                .upload(uploadPath, buffer, {
                     contentType: file.type,
                     upsert: false
                 })
 
             if (error) {
-                console.error('Supabase upload error:', error)
-                return { success: false, error: 'ファイルのアップロードに失敗しました' }
+                // 初回セットアップ漏れ時はバケットを作成して1回だけ再試行
+                if (isBucketNotFoundError(error)) {
+                    const ensureResult = await ensureSupabaseBucket()
+                    if (!ensureResult.success) {
+                        return { success: false, error: ensureResult.error }
+                    }
+
+                    const { error: retryError } = await supabaseAdmin.storage
+                        .from(SUPABASE_BUCKET)
+                        .upload(uploadPath, buffer, {
+                            contentType: file.type,
+                            upsert: false,
+                        })
+
+                    if (retryError) {
+                        console.error('Supabase upload retry error:', retryError)
+                        return { success: false, error: 'ファイルのアップロードに失敗しました' }
+                    }
+                } else {
+                    console.error('Supabase upload error:', error)
+                    return { success: false, error: 'ファイルのアップロードに失敗しました' }
+                }
             }
 
             // 公開URLの取得
             const { data: { publicUrl } } = supabaseAdmin.storage
-                .from('images')
-                .getPublicUrl(`products/${fileName}`)
+                .from(SUPABASE_BUCKET)
+                .getPublicUrl(uploadPath)
 
             return { success: true, imageUrl: publicUrl }
         }
@@ -91,7 +150,7 @@ export async function deleteImage(
             const filePath = `products/${fileName}`
 
             const { error } = await supabaseAdmin.storage
-                .from('images')
+                .from(SUPABASE_BUCKET)
                 .remove([filePath])
 
             if (error) {

@@ -17,9 +17,16 @@ interface SelectionAreaProps {
   setPlacedItems: React.Dispatch<React.SetStateAction<PlacedItem[]>>
   inventoryData?: SweetItem[] // 在庫データを受け取るプロパティを追加
   selectedStoreId: string
+  excludedAllergies?: string[]
 }
 
-export default function SelectionArea({ placedItems, setPlacedItems, inventoryData, selectedStoreId }: SelectionAreaProps) {
+export default function SelectionArea({
+  placedItems,
+  setPlacedItems,
+  inventoryData,
+  selectedStoreId,
+  excludedAllergies = [],
+}: SelectionAreaProps) {
   const [activeTab, setActiveTab] = useState("餅菓子")
   const [sweets, setSweets] = useState<SweetItem[]>([])
   const [dividers, setDividers] = useState<DividerItem[]>([])
@@ -186,10 +193,26 @@ export default function SelectionArea({ placedItems, setPlacedItems, inventoryDa
 // 指定したカテゴリに対する検索＋カテゴリフィルタを返すヘルパー
 const getFilteredSweets = (category: string) => {
   const term = (searchTerm ?? "").trim().toLowerCase()
+  const blockedAllergies = excludedAllergies
+    .map((allergy) => allergy.trim().toLowerCase())
+    .filter((allergy) => allergy.length > 0)
+
+  const normalizeAllergyTokens = (allergies: string[]) => {
+    return allergies
+      .flatMap((allergy) => allergy.split(/[,、]/g))
+      .map((allergy) => allergy.trim().toLowerCase())
+      .filter((allergy) => allergy.length > 0 && allergy !== "該当なし")
+  }
 
   return sweets.filter((s) => {
     // 在庫が0個の商品は表示しない
     if ((s.stockQuantity ?? 0) <= 0) return false
+
+    if (blockedAllergies.length > 0) {
+      const sweetAllergies = normalizeAllergyTokens(s.allergies || [])
+      const hasBlockedAllergy = sweetAllergies.some((allergy) => blockedAllergies.includes(allergy))
+      if (hasBlockedAllergy) return false
+    }
 
     // 「全て」ならカテゴリ判定をスキップ（= 全商品が対象）
     const matchCategory = category === "全て" || s.category === category
