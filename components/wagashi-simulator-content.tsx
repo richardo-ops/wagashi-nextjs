@@ -333,6 +333,19 @@ export default function WagashiSimulatorContent({
     return effectiveBoxDef.sizeStr
   }, [effectiveBoxDef, boxSize])
 
+  const handleConfirm = () => {
+    if (hasOverlap) return
+
+    sessionStorage.setItem("placedItems", JSON.stringify(placedItems))
+    sessionStorage.setItem("boxSize", effectiveBoxSize)
+    sessionStorage.setItem("selectedBoxType", JSON.stringify(effectiveBoxDef ?? selectedBoxType))
+    sessionStorage.setItem("products", JSON.stringify(groupedPlacedItems))
+    sessionStorage.setItem("needsNoshi", JSON.stringify(false))
+    sessionStorage.setItem("needsBag", JSON.stringify(selectedBag.qty > 0))
+    sessionStorage.setItem("selectedBag", JSON.stringify(selectedBag))
+    router.push("/confirm")
+  }
+
   // 詰め合わせの上限金額（円）を設定する状態
   const [priceLimitStr, setPriceLimitStr] = useState<string>("")
   const [priceLimit, setPriceLimit] = useState<number | null>(null)
@@ -782,17 +795,7 @@ export default function WagashiSimulatorContent({
                       variant="ghost"
                       size="sm"
                       className={`text-[var(--color-indigo)] hover:bg-[var(--color-indigo-light)] ml-2 ${hasOverlap ? 'opacity-60 cursor-not-allowed' : ''}`}
-                      onClick={() => {
-                        if (hasOverlap) return
-                        sessionStorage.setItem("placedItems", JSON.stringify(placedItems))
-                        sessionStorage.setItem("boxSize", boxSize)
-                        sessionStorage.setItem("selectedBoxType", JSON.stringify(selectedBoxType))
-                        sessionStorage.setItem("products", JSON.stringify(groupedPlacedItems))
-                        sessionStorage.setItem("needsNoshi", JSON.stringify(false))
-                        sessionStorage.setItem("needsBag", JSON.stringify(selectedBag.qty > 0))
-                        sessionStorage.setItem("selectedBag", JSON.stringify(selectedBag))
-                        router.push('/confirm')
-                      }}
+                      onClick={handleConfirm}
                       disabled={hasOverlap}
                       title={hasOverlap ? '商品が重なっています：確認できません' : undefined}
                     >
@@ -843,17 +846,7 @@ export default function WagashiSimulatorContent({
                   variant="outline"
                   size="sm"
                   className={`font-bold px-4 py-1 rounded bg-[var(--color-indigo-light)] border border-[var(--color-indigo)] text-white transition-colors text-base shadow ${hasOverlap ? 'opacity-60 cursor-not-allowed hover:bg-[var(--color-indigo-light)]' : 'hover:bg-[var(--color-indigo)] hover:text-white'}`}
-                  onClick={() => {
-                    if (hasOverlap) return
-                    sessionStorage.setItem("placedItems", JSON.stringify(placedItems))
-                    sessionStorage.setItem("boxSize", boxSize)
-                    sessionStorage.setItem("selectedBoxType", JSON.stringify(selectedBoxType))
-                    sessionStorage.setItem("products", JSON.stringify(groupedPlacedItems))
-                    sessionStorage.setItem("needsNoshi", JSON.stringify(false))
-                    sessionStorage.setItem("needsBag", JSON.stringify(selectedBag.qty > 0))
-                    sessionStorage.setItem("selectedBag", JSON.stringify(selectedBag))
-                    router.push('/confirm')
-                  }}
+                  onClick={handleConfirm}
                   disabled={hasOverlap}
                   title={hasOverlap ? '商品が重なっています：確認できません' : undefined}
                 >

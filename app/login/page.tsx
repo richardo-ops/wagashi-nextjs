@@ -97,6 +97,7 @@ export default function AdminLogin() {
       <LoadingOverlay isLoading={isLoading} message="ログイン中..." />
       <div className="max-w-md w-full space-y-8">
         <div>
+          テスト用アカウント : tsume@example.com / tsumetsume
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             {mode === 'login' ? '管理画面ログイン' : '管理アカウント作成'}
           </h2>
