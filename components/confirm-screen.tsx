@@ -247,8 +247,8 @@ export default function ConfirmScreen({
               ) : (
                 <div className="flex-1 overflow-auto mb-4">
                   <ul className="space-y-3">
-                    {products.map((p) => (
-                      <li key={p.id} className="flex items-center justify-between">
+                    {products.map((p, index) => (
+                      <li key={`${p.id}-${index}`} className="flex items-center justify-between">
                         <div className="text-gray-900 text-base font-medium">{p.name} <span className="text-sm font-normal text-gray-600">- {p.qty}個入り</span></div>
                         <div className="text-gray-900 text-base font-semibold">{formatYen(p.price)}</div>
                       </li>
@@ -275,8 +275,8 @@ export default function ConfirmScreen({
               <h2 className="text-lg font-extrabold text-gray-900 mb-3">アレルゲン情報</h2>
               <div className="text-sm text-gray-700 mb-2">各商品のアレルゲン情報（モック）</div>
               <ul className="space-y-2">
-                {products.map((p) => (
-                  <li key={p.id} className="flex items-start justify-between bg-gray-50 p-3 rounded">
+                {products.map((p, index) => (
+                  <li key={`${p.id}-${index}`} className="flex items-start justify-between bg-gray-50 p-3 rounded">
                     <div>
                       <div className="font-medium text-gray-900">{p.name}</div>
                       <div className="text-sm text-gray-600">アレルゲン: なし</div>

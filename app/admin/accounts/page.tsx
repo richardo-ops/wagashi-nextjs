@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,11 +16,14 @@ interface AdminUser {
   email: string
   name: string
   role: string
+  companyId?: string
+  companyName?: string
   createdAt: string
   updatedAt: string
 }
 
 export default function AccountsPage() {
+  const { data: session, status } = useSession()
   const [users, setUsers] = useState<AdminUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -36,6 +40,8 @@ export default function AccountsPage() {
   useEffect(() => {
     fetchUsers()
   }, [])
+
+  const isSuperAdmin = session?.user?.role === 'super-admin' || session?.user?.role === 'super_admin'
 
   const fetchUsers = async () => {
     try {
@@ -112,6 +118,10 @@ export default function AccountsPage() {
     return <div className="flex justify-center p-8">読み込み中...</div>
   }
 
+  if (status === 'loading') {
+    return <div className="flex justify-center p-8">読み込み中...</div>
+  }
+
   return (
     <div className="space-y-6">
       <LoadingOverlay isLoading={isSubmitting} message="処理中..." />
@@ -122,6 +132,14 @@ export default function AccountsPage() {
           新規作成
         </Button>
       </div>
+
+      {isSuperAdmin && (
+        <Alert>
+          <AlertDescription>
+            あなたはスーパー管理者です。全アカウントを閲覧・削除できます。
+          </AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="destructive">
@@ -180,7 +198,7 @@ export default function AccountsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">管理者</SelectItem>
-                      <SelectItem value="super_admin">スーパー管理者</SelectItem>
+                        {isSuperAdmin && <SelectItem value="super-admin">スーパー管理者</SelectItem>}
                     </SelectContent>
                   </Select>
                 </div>
@@ -206,8 +224,11 @@ export default function AccountsPage() {
                   <h3 className="font-semibold">{user.name}</h3>
                   <p className="text-sm text-gray-600">{user.email}</p>
                   <p className="text-xs text-gray-500">
-                    権限: {user.role === 'super_admin' ? 'スーパー管理者' : '管理者'}
+                    権限: {user.role === 'super-admin' || user.role === 'super_admin' ? 'スーパー管理者' : '管理者'}
                   </p>
+                  {isSuperAdmin && user.companyName && (
+                    <p className="text-xs text-gray-500">会社: {user.companyName}</p>
+                  )}
                 </div>
                 <div className="flex space-x-2">
                   <Button

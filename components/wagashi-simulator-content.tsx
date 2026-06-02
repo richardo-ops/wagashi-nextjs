@@ -20,6 +20,8 @@ import { PlusCircle, Save, Upload, HelpCircle, Settings, Package, Cloud, Printer
 import { useState, useEffect, useMemo, useRef } from "react"
 //追加
 import { useRouter } from "next/navigation"
+import { generateId } from "@/lib/utils"
+import { toast } from "sonner"
 
 // 選択中商品表示のモーダル（仮）
 import SelectItemModal from "@/components/select-item-modal"
@@ -140,6 +142,8 @@ export default function WagashiSimulatorContent({
   const [selectedAllergyFilters, setSelectedAllergyFilters] = useState<string[]>([])
   const [companyMaxBoxSize, setCompanyMaxBoxSize] = useState<string | null>(null)
   const [companyBoxDefs, setCompanyBoxDefs] = useState<AutoBoxDef[]>(BOX_TYPE_DEFS)
+  const [autoArrangeMode, setAutoArrangeMode] = useState(false)
+  const [autoArrangeItems, setAutoArrangeItems] = useState<SweetItem[]>([])
 
   //追加： Next.js のルーター
   const router = useRouter()
@@ -263,6 +267,193 @@ export default function WagashiSimulatorContent({
     window.location.reload()
   }
 
+  const handleToggleAutoArrangeMode = () => {
+    setAutoArrangeMode((prev) => !prev)
+  }
+
+  const handleAddAutoArrangeItem = (item: SweetItem) => {
+    if (!item.inStock) {
+      toast.error("在庫切れの商品は追加できません")
+      return
+    }
+
+    setAutoArrangeItems((prev) => [...prev, item])
+    setAutoArrangeMode(true)
+  }
+
+  const handleRemoveAutoArrangeItem = (index: number) => {
+    setAutoArrangeItems((prev) => prev.filter((_, currentIndex) => currentIndex !== index))
+  }
+
+  const handleClearAutoArrangeItems = () => {
+    setAutoArrangeItems([])
+  }
+
+  const rectanglesOverlap = (
+    leftA: number,
+    topA: number,
+    widthA: number,
+    heightA: number,
+    leftB: number,
+    topB: number,
+    widthB: number,
+    heightB: number,
+  ) => {
+    const rightA = leftA + widthA
+    const bottomA = topA + heightA
+    const rightB = leftB + widthB
+    const bottomB = topB + heightB
+
+    return !(rightA <= leftB || leftA >= rightB || bottomA <= topB || topA >= bottomB)
+  }
+
+  const intersectsGridLineDivider = (
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    divider: PlacedItem,
+  ) => {
+    if (divider.type !== "divider" || !divider.isGridLine || !divider.orientation) {
+      return false
+    }
+
+    if (divider.orientation === "horizontal") {
+      const dividerY = divider.y
+      const dividerLeft = divider.x
+      const dividerRight = divider.x + divider.width
+
+      if (y < dividerY && y + height > dividerY) {
+        return !(x + width <= dividerLeft || x >= dividerRight)
+      }
+
+      return false
+    }
+
+    const dividerX = divider.x
+    const dividerTop = divider.y
+    const dividerBottom = divider.y + divider.height
+
+    if (x < dividerX && x + width > dividerX) {
+      return !(y + height <= dividerTop || y >= dividerBottom)
+    }
+
+    return false
+  }
+
+  const canPlaceAutoItem = (
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    boxWidth: number,
+    boxHeight: number,
+    occupiedItems: PlacedItem[],
+  ) => {
+    if (x < 0 || y < 0 || x + width > boxWidth || y + height > boxHeight) {
+      return false
+    }
+
+    return occupiedItems.every((item) => {
+      if (item.type === "divider" && item.isGridLine) {
+        return !intersectsGridLineDivider(x, y, width, height, item)
+      }
+
+      return !rectanglesOverlap(x, y, width, height, item.x, item.y, item.width, item.height)
+    })
+  }
+
+  const findPackedPosition = (
+    width: number,
+    height: number,
+    boxWidth: number,
+    boxHeight: number,
+    occupiedItems: PlacedItem[],
+    placedItemsInBatch: PlacedItem[],
+  ) => {
+    const step = 1
+
+    for (let y = 0; y <= boxHeight - height; y += step) {
+      for (let x = 0; x <= boxWidth - width; x += step) {
+        const blockedByBatch = placedItemsInBatch.some((item) =>
+          rectanglesOverlap(x, y, width, height, item.x, item.y, item.width, item.height),
+        )
+
+        if (blockedByBatch) {
+          continue
+        }
+
+        if (canPlaceAutoItem(x, y, width, height, boxWidth, boxHeight, occupiedItems)) {
+          return { x, y }
+        }
+      }
+    }
+
+    return null
+  }
+
+  const handleExecuteAutoArrange = () => {
+    if (autoArrangeItems.length === 0) {
+      toast.error("詰め合わせリストに商品を追加してください")
+      return
+    }
+
+    const [boxWidthCm, boxHeightCm] = boxSize.split("x").map(Number)
+    const boxWidth = Math.round(boxWidthCm * 10)
+    const boxHeight = Math.round(boxHeightCm * 10)
+    const occupiedItems = placedItems.filter((item) => item.type !== "sweet")
+    const nextPlacedItems: PlacedItem[] = []
+    const packedOrder = [...autoArrangeItems].sort((a, b) => {
+      const areaA = a.width * a.height
+      const areaB = b.width * b.height
+
+      if (areaA !== areaB) {
+        return areaB - areaA
+      }
+
+      const sideA = Math.max(a.width, a.height)
+      const sideB = Math.max(b.width, b.height)
+      return sideB - sideA
+    })
+
+    for (const sweet of packedOrder) {
+      const width = Math.round(sweet.width * 10)
+      const height = Math.round(sweet.height * 10)
+
+      if (width > boxWidth || height > boxHeight) {
+        toast.error(`${sweet.name} は現在の箱に入りません`)
+        return
+      }
+
+      const packedPosition = findPackedPosition(width, height, boxWidth, boxHeight, occupiedItems, nextPlacedItems)
+
+      if (!packedPosition) {
+        toast.error(`${sweet.name} を配置できませんでした。詰め合わせリストを減らしてください`)
+        return
+      }
+
+      nextPlacedItems.push({
+        id: generateId(),
+        itemId: sweet.id,
+        type: "sweet",
+        x: packedPosition.x,
+        y: packedPosition.y,
+        width,
+        height,
+        rotation: 0,
+        isLocked: false,
+        imageUrl: sweet.placedImageUrl || sweet.imageUrl || "",
+        name: sweet.name,
+        price: sweet.price,
+      })
+    }
+
+    setPlacedItems([...occupiedItems, ...nextPlacedItems])
+    setAutoArrangeItems([])
+    setAutoArrangeMode(false)
+    toast.success("自動詰め合わせを実行しました")
+  }
+
   // 箱選択のハンドラー
   const handleBoxSelection = (newBoxSize: BoxSize, boxType: BoxType) => {
     setBoxSize(newBoxSize)
@@ -332,6 +523,19 @@ export default function WagashiSimulatorContent({
     if (!effectiveBoxDef) return boxSize
     return effectiveBoxDef.sizeStr
   }, [effectiveBoxDef, boxSize])
+
+  const handleConfirm = () => {
+    if (hasOverlap) return
+
+    sessionStorage.setItem("placedItems", JSON.stringify(placedItems))
+    sessionStorage.setItem("boxSize", effectiveBoxSize)
+    sessionStorage.setItem("selectedBoxType", JSON.stringify(effectiveBoxDef ?? selectedBoxType))
+    sessionStorage.setItem("products", JSON.stringify(groupedPlacedItems))
+    sessionStorage.setItem("needsNoshi", JSON.stringify(false))
+    sessionStorage.setItem("needsBag", JSON.stringify(selectedBag.qty > 0))
+    sessionStorage.setItem("selectedBag", JSON.stringify(selectedBag))
+    router.push("/confirm")
+  }
 
   // 詰め合わせの上限金額（円）を設定する状態
   const [priceLimitStr, setPriceLimitStr] = useState<string>("")
@@ -782,17 +986,7 @@ export default function WagashiSimulatorContent({
                       variant="ghost"
                       size="sm"
                       className={`text-[var(--color-indigo)] hover:bg-[var(--color-indigo-light)] ml-2 ${hasOverlap ? 'opacity-60 cursor-not-allowed' : ''}`}
-                      onClick={() => {
-                        if (hasOverlap) return
-                        sessionStorage.setItem("placedItems", JSON.stringify(placedItems))
-                        sessionStorage.setItem("boxSize", boxSize)
-                        sessionStorage.setItem("selectedBoxType", JSON.stringify(selectedBoxType))
-                        sessionStorage.setItem("products", JSON.stringify(groupedPlacedItems))
-                        sessionStorage.setItem("needsNoshi", JSON.stringify(false))
-                        sessionStorage.setItem("needsBag", JSON.stringify(selectedBag.qty > 0))
-                        sessionStorage.setItem("selectedBag", JSON.stringify(selectedBag))
-                        router.push('/confirm')
-                      }}
+                      onClick={handleConfirm}
                       disabled={hasOverlap}
                       title={hasOverlap ? '商品が重なっています：確認できません' : undefined}
                     >
@@ -811,6 +1005,13 @@ export default function WagashiSimulatorContent({
                 inventoryData={inventoryData}
                 selectedStoreId={selectedStoreId}
                 excludedAllergies={selectedAllergyFilters}
+                autoArrangeMode={autoArrangeMode}
+                autoArrangeItems={autoArrangeItems}
+                onToggleAutoArrangeMode={handleToggleAutoArrangeMode}
+                onAddAutoArrangeItem={handleAddAutoArrangeItem}
+                onRemoveAutoArrangeItem={handleRemoveAutoArrangeItem}
+                onClearAutoArrangeItems={handleClearAutoArrangeItems}
+                onExecuteAutoArrange={handleExecuteAutoArrange}
               />
             </div>
             
@@ -843,17 +1044,7 @@ export default function WagashiSimulatorContent({
                   variant="outline"
                   size="sm"
                   className={`font-bold px-4 py-1 rounded bg-[var(--color-indigo-light)] border border-[var(--color-indigo)] text-white transition-colors text-base shadow ${hasOverlap ? 'opacity-60 cursor-not-allowed hover:bg-[var(--color-indigo-light)]' : 'hover:bg-[var(--color-indigo)] hover:text-white'}`}
-                  onClick={() => {
-                    if (hasOverlap) return
-                    sessionStorage.setItem("placedItems", JSON.stringify(placedItems))
-                    sessionStorage.setItem("boxSize", boxSize)
-                    sessionStorage.setItem("selectedBoxType", JSON.stringify(selectedBoxType))
-                    sessionStorage.setItem("products", JSON.stringify(groupedPlacedItems))
-                    sessionStorage.setItem("needsNoshi", JSON.stringify(false))
-                    sessionStorage.setItem("needsBag", JSON.stringify(selectedBag.qty > 0))
-                    sessionStorage.setItem("selectedBag", JSON.stringify(selectedBag))
-                    router.push('/confirm')
-                  }}
+                  onClick={handleConfirm}
                   disabled={hasOverlap}
                   title={hasOverlap ? '商品が重なっています：確認できません' : undefined}
                 >
@@ -911,6 +1102,13 @@ export default function WagashiSimulatorContent({
                   inventoryData={inventoryData}
                   selectedStoreId={selectedStoreId}
                   excludedAllergies={selectedAllergyFilters}
+                  autoArrangeMode={autoArrangeMode}
+                  autoArrangeItems={autoArrangeItems}
+                  onToggleAutoArrangeMode={handleToggleAutoArrangeMode}
+                  onAddAutoArrangeItem={handleAddAutoArrangeItem}
+                  onRemoveAutoArrangeItem={handleRemoveAutoArrangeItem}
+                  onClearAutoArrangeItems={handleClearAutoArrangeItems}
+                  onExecuteAutoArrange={handleExecuteAutoArrange}
                 />
               </div>
             </div>

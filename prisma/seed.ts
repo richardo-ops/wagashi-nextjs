@@ -120,7 +120,7 @@ async function main() {
         email: 'admin@example.com',
         password: hashedPassword,
         name: '管理者',
-        role: 'super_admin',
+        role: 'super-admin',
         companyId: company.id
       }
     })
