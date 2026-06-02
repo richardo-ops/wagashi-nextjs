@@ -105,6 +105,26 @@ export default function BoxArea({
 
   const shouldShowDynamicGuideDivider = guideDividerSizesCm.length > 0
 
+  const activeGuideDividerSizeCm = useMemo(() => {
+    if (!shouldShowDynamicGuideDivider || boxTypes.length === 0) return null
+
+    const sortedSizes = boxTypes
+      .map((boxType) => Number.parseFloat(boxType.size.split("x")[0]))
+      .filter((size) => Number.isFinite(size) && size > 0)
+      .sort((a, b) => a - b)
+
+    if (sortedSizes.length === 0) return null
+
+    const maxPlacedCm = Math.max(
+      ...placedItems
+        .filter((item) => item.type === "sweet")
+        .map((item) => (item.x + item.width) / 10),
+      0,
+    )
+
+    return sortedSizes.find((size) => maxPlacedCm <= size) ?? sortedSizes[sortedSizes.length - 1]
+  }, [boxTypes, placedItems, shouldShowDynamicGuideDivider])
+
   // 表示上の最大サイズを定義（cm単位の箱サイズに基づいて計算）
   const getMaxDisplaySize = () => {
     if (typeof window !== 'undefined') {
@@ -1248,7 +1268,10 @@ export default function BoxArea({
                   top: 0,
                   bottom: 0,
                   width: "0px",
-                  borderLeft: "4px solid var(--color-indigo)",
+                  borderLeft:
+                    dividerSizeCm === activeGuideDividerSizeCm
+                      ? "4px solid var(--color-indigo)"
+                      : "1px solid rgba(79, 70, 229, 0.25)",
                   zIndex: 20,
                 }}
               />

@@ -363,6 +363,35 @@ export default function WagashiSimulatorContent({
     })
   }
 
+  const findPackedPosition = (
+    width: number,
+    height: number,
+    boxWidth: number,
+    boxHeight: number,
+    occupiedItems: PlacedItem[],
+    placedItemsInBatch: PlacedItem[],
+  ) => {
+    const step = 1
+
+    for (let y = 0; y <= boxHeight - height; y += step) {
+      for (let x = 0; x <= boxWidth - width; x += step) {
+        const blockedByBatch = placedItemsInBatch.some((item) =>
+          rectanglesOverlap(x, y, width, height, item.x, item.y, item.width, item.height),
+        )
+
+        if (blockedByBatch) {
+          continue
+        }
+
+        if (canPlaceAutoItem(x, y, width, height, boxWidth, boxHeight, occupiedItems)) {
+          return { x, y }
+        }
+      }
+    }
+
+    return null
+  }
+
   const handleExecuteAutoArrange = () => {
     if (autoArrangeItems.length === 0) {
       toast.error("詰め合わせリストに商品を追加してください")
@@ -374,8 +403,20 @@ export default function WagashiSimulatorContent({
     const boxHeight = Math.round(boxHeightCm * 10)
     const occupiedItems = placedItems.filter((item) => item.type !== "sweet")
     const nextPlacedItems: PlacedItem[] = []
+    const packedOrder = [...autoArrangeItems].sort((a, b) => {
+      const areaA = a.width * a.height
+      const areaB = b.width * b.height
 
-    for (const sweet of autoArrangeItems) {
+      if (areaA !== areaB) {
+        return areaB - areaA
+      }
+
+      const sideA = Math.max(a.width, a.height)
+      const sideB = Math.max(b.width, b.height)
+      return sideB - sideA
+    })
+
+    for (const sweet of packedOrder) {
       const width = Math.round(sweet.width * 10)
       const height = Math.round(sweet.height * 10)
 
@@ -384,46 +425,27 @@ export default function WagashiSimulatorContent({
         return
       }
 
-      let placed = false
-      for (let attempt = 0; attempt < 250; attempt++) {
-        const x = Math.floor(Math.random() * (boxWidth - width + 1))
-        const y = Math.floor(Math.random() * (boxHeight - height + 1))
+      const packedPosition = findPackedPosition(width, height, boxWidth, boxHeight, occupiedItems, nextPlacedItems)
 
-        const blockedByPlaced = nextPlacedItems.some((item) =>
-          rectanglesOverlap(x, y, width, height, item.x, item.y, item.width, item.height),
-        )
-
-        if (blockedByPlaced) {
-          continue
-        }
-
-        if (!canPlaceAutoItem(x, y, width, height, boxWidth, boxHeight, occupiedItems)) {
-          continue
-        }
-
-        nextPlacedItems.push({
-          id: generateId(),
-          itemId: sweet.id,
-          type: "sweet",
-          x,
-          y,
-          width,
-          height,
-          rotation: 0,
-          isLocked: false,
-          imageUrl: sweet.placedImageUrl || sweet.imageUrl || "",
-          name: sweet.name,
-          price: sweet.price,
-        })
-
-        placed = true
-        break
-      }
-
-      if (!placed) {
+      if (!packedPosition) {
         toast.error(`${sweet.name} を配置できませんでした。詰め合わせリストを減らしてください`)
         return
       }
+
+      nextPlacedItems.push({
+        id: generateId(),
+        itemId: sweet.id,
+        type: "sweet",
+        x: packedPosition.x,
+        y: packedPosition.y,
+        width,
+        height,
+        rotation: 0,
+        isLocked: false,
+        imageUrl: sweet.placedImageUrl || sweet.imageUrl || "",
+        name: sweet.name,
+        price: sweet.price,
+      })
     }
 
     setPlacedItems([...occupiedItems, ...nextPlacedItems])
