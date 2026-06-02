@@ -20,6 +20,8 @@ import { PlusCircle, Save, Upload, HelpCircle, Settings, Package, Cloud, Printer
 import { useState, useEffect, useMemo, useRef } from "react"
 //追加
 import { useRouter } from "next/navigation"
+import { generateId } from "@/lib/utils"
+import { toast } from "sonner"
 
 // 選択中商品表示のモーダル（仮）
 import SelectItemModal from "@/components/select-item-modal"
@@ -140,6 +142,8 @@ export default function WagashiSimulatorContent({
   const [selectedAllergyFilters, setSelectedAllergyFilters] = useState<string[]>([])
   const [companyMaxBoxSize, setCompanyMaxBoxSize] = useState<string | null>(null)
   const [companyBoxDefs, setCompanyBoxDefs] = useState<AutoBoxDef[]>(BOX_TYPE_DEFS)
+  const [autoArrangeMode, setAutoArrangeMode] = useState(false)
+  const [autoArrangeItems, setAutoArrangeItems] = useState<SweetItem[]>([])
 
   //追加： Next.js のルーター
   const router = useRouter()
@@ -261,6 +265,171 @@ export default function WagashiSimulatorContent({
   // ページをリロードする関数
   const handleReload = () => {
     window.location.reload()
+  }
+
+  const handleToggleAutoArrangeMode = () => {
+    setAutoArrangeMode((prev) => !prev)
+  }
+
+  const handleAddAutoArrangeItem = (item: SweetItem) => {
+    if (!item.inStock) {
+      toast.error("在庫切れの商品は追加できません")
+      return
+    }
+
+    setAutoArrangeItems((prev) => [...prev, item])
+    setAutoArrangeMode(true)
+  }
+
+  const handleRemoveAutoArrangeItem = (index: number) => {
+    setAutoArrangeItems((prev) => prev.filter((_, currentIndex) => currentIndex !== index))
+  }
+
+  const handleClearAutoArrangeItems = () => {
+    setAutoArrangeItems([])
+  }
+
+  const rectanglesOverlap = (
+    leftA: number,
+    topA: number,
+    widthA: number,
+    heightA: number,
+    leftB: number,
+    topB: number,
+    widthB: number,
+    heightB: number,
+  ) => {
+    const rightA = leftA + widthA
+    const bottomA = topA + heightA
+    const rightB = leftB + widthB
+    const bottomB = topB + heightB
+
+    return !(rightA <= leftB || leftA >= rightB || bottomA <= topB || topA >= bottomB)
+  }
+
+  const intersectsGridLineDivider = (
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    divider: PlacedItem,
+  ) => {
+    if (divider.type !== "divider" || !divider.isGridLine || !divider.orientation) {
+      return false
+    }
+
+    if (divider.orientation === "horizontal") {
+      const dividerY = divider.y
+      const dividerLeft = divider.x
+      const dividerRight = divider.x + divider.width
+
+      if (y < dividerY && y + height > dividerY) {
+        return !(x + width <= dividerLeft || x >= dividerRight)
+      }
+
+      return false
+    }
+
+    const dividerX = divider.x
+    const dividerTop = divider.y
+    const dividerBottom = divider.y + divider.height
+
+    if (x < dividerX && x + width > dividerX) {
+      return !(y + height <= dividerTop || y >= dividerBottom)
+    }
+
+    return false
+  }
+
+  const canPlaceAutoItem = (
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    boxWidth: number,
+    boxHeight: number,
+    occupiedItems: PlacedItem[],
+  ) => {
+    if (x < 0 || y < 0 || x + width > boxWidth || y + height > boxHeight) {
+      return false
+    }
+
+    return occupiedItems.every((item) => {
+      if (item.type === "divider" && item.isGridLine) {
+        return !intersectsGridLineDivider(x, y, width, height, item)
+      }
+
+      return !rectanglesOverlap(x, y, width, height, item.x, item.y, item.width, item.height)
+    })
+  }
+
+  const handleExecuteAutoArrange = () => {
+    if (autoArrangeItems.length === 0) {
+      toast.error("詰め合わせリストに商品を追加してください")
+      return
+    }
+
+    const [boxWidthCm, boxHeightCm] = boxSize.split("x").map(Number)
+    const boxWidth = Math.round(boxWidthCm * 10)
+    const boxHeight = Math.round(boxHeightCm * 10)
+    const occupiedItems = placedItems.filter((item) => item.type !== "sweet")
+    const nextPlacedItems: PlacedItem[] = []
+
+    for (const sweet of autoArrangeItems) {
+      const width = Math.round(sweet.width * 10)
+      const height = Math.round(sweet.height * 10)
+
+      if (width > boxWidth || height > boxHeight) {
+        toast.error(`${sweet.name} は現在の箱に入りません`)
+        return
+      }
+
+      let placed = false
+      for (let attempt = 0; attempt < 250; attempt++) {
+        const x = Math.floor(Math.random() * (boxWidth - width + 1))
+        const y = Math.floor(Math.random() * (boxHeight - height + 1))
+
+        const blockedByPlaced = nextPlacedItems.some((item) =>
+          rectanglesOverlap(x, y, width, height, item.x, item.y, item.width, item.height),
+        )
+
+        if (blockedByPlaced) {
+          continue
+        }
+
+        if (!canPlaceAutoItem(x, y, width, height, boxWidth, boxHeight, occupiedItems)) {
+          continue
+        }
+
+        nextPlacedItems.push({
+          id: generateId(),
+          itemId: sweet.id,
+          type: "sweet",
+          x,
+          y,
+          width,
+          height,
+          rotation: 0,
+          isLocked: false,
+          imageUrl: sweet.placedImageUrl || sweet.imageUrl || "",
+          name: sweet.name,
+          price: sweet.price,
+        })
+
+        placed = true
+        break
+      }
+
+      if (!placed) {
+        toast.error(`${sweet.name} を配置できませんでした。詰め合わせリストを減らしてください`)
+        return
+      }
+    }
+
+    setPlacedItems([...occupiedItems, ...nextPlacedItems])
+    setAutoArrangeItems([])
+    setAutoArrangeMode(false)
+    toast.success("自動詰め合わせを実行しました")
   }
 
   // 箱選択のハンドラー
@@ -814,6 +983,13 @@ export default function WagashiSimulatorContent({
                 inventoryData={inventoryData}
                 selectedStoreId={selectedStoreId}
                 excludedAllergies={selectedAllergyFilters}
+                autoArrangeMode={autoArrangeMode}
+                autoArrangeItems={autoArrangeItems}
+                onToggleAutoArrangeMode={handleToggleAutoArrangeMode}
+                onAddAutoArrangeItem={handleAddAutoArrangeItem}
+                onRemoveAutoArrangeItem={handleRemoveAutoArrangeItem}
+                onClearAutoArrangeItems={handleClearAutoArrangeItems}
+                onExecuteAutoArrange={handleExecuteAutoArrange}
               />
             </div>
             
@@ -904,6 +1080,13 @@ export default function WagashiSimulatorContent({
                   inventoryData={inventoryData}
                   selectedStoreId={selectedStoreId}
                   excludedAllergies={selectedAllergyFilters}
+                  autoArrangeMode={autoArrangeMode}
+                  autoArrangeItems={autoArrangeItems}
+                  onToggleAutoArrangeMode={handleToggleAutoArrangeMode}
+                  onAddAutoArrangeItem={handleAddAutoArrangeItem}
+                  onRemoveAutoArrangeItem={handleRemoveAutoArrangeItem}
+                  onClearAutoArrangeItems={handleClearAutoArrangeItems}
+                  onExecuteAutoArrange={handleExecuteAutoArrange}
                 />
               </div>
             </div>

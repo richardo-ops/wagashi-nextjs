@@ -18,6 +18,13 @@ interface SelectionAreaProps {
   inventoryData?: SweetItem[] // 在庫データを受け取るプロパティを追加
   selectedStoreId: string
   excludedAllergies?: string[]
+  autoArrangeMode?: boolean
+  autoArrangeItems?: SweetItem[]
+  onToggleAutoArrangeMode?: () => void
+  onAddAutoArrangeItem?: (item: SweetItem) => void
+  onRemoveAutoArrangeItem?: (index: number) => void
+  onClearAutoArrangeItems?: () => void
+  onExecuteAutoArrange?: () => void
 }
 
 export default function SelectionArea({
@@ -26,6 +33,13 @@ export default function SelectionArea({
   inventoryData,
   selectedStoreId,
   excludedAllergies = [],
+  autoArrangeMode = false,
+  autoArrangeItems = [],
+  onToggleAutoArrangeMode,
+  onAddAutoArrangeItem,
+  onRemoveAutoArrangeItem,
+  onClearAutoArrangeItems,
+  onExecuteAutoArrange,
 }: SelectionAreaProps) {
   const [activeTab, setActiveTab] = useState("餅菓子")
   const [sweets, setSweets] = useState<SweetItem[]>([])
@@ -246,15 +260,26 @@ const getFilteredSweets = (category: string) => {
           <span className="inline-block w-1 h-5 sm:h-6 bg-[var(--color-indigo)] mr-2"></span>
           和菓子選択
         </div>
-        <Button
-          onClick={loadData}
-          size="sm"
-          variant="outline"
-          className="text-xs px-2 py-1 h-6"
-          disabled={isLoading}
-        >
-          <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={onToggleAutoArrangeMode}
+            size="sm"
+            variant={autoArrangeMode ? "default" : "outline"}
+            className="text-xs px-2 py-1 h-6"
+            disabled={isLoading}
+          >
+            自動詰め合わせ
+          </Button>
+          <Button
+            onClick={loadData}
+            size="sm"
+            variant="outline"
+            className="text-xs px-2 py-1 h-6"
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </h2>
 
       {/* 検索入力（タブ間で検索語を共有） */}
@@ -288,6 +313,61 @@ const getFilteredSweets = (category: string) => {
     </button>
   )}
 </div>
+
+      {autoArrangeMode && (
+        <div className="mb-3 rounded-md border border-[var(--color-indigo-light)] bg-[var(--color-beige)] p-3">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div>
+              <div className="text-sm font-semibold text-[var(--color-indigo)]">詰め合わせリスト</div>
+              <div className="text-xs text-gray-600">商品をタップすると1つずつ追加されます</div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs px-2 py-1 h-7"
+                onClick={onClearAutoArrangeItems}
+                disabled={autoArrangeItems.length === 0}
+              >
+                クリア
+              </Button>
+              <Button
+                size="sm"
+                className="text-xs px-2 py-1 h-7 bg-[var(--color-indigo)] text-white"
+                onClick={onExecuteAutoArrange}
+                disabled={autoArrangeItems.length === 0}
+              >
+                実行
+              </Button>
+            </div>
+          </div>
+
+          {autoArrangeItems.length === 0 ? (
+            <div className="rounded-sm border border-dashed border-gray-300 bg-white/70 px-3 py-4 text-center text-xs text-gray-500">
+              まだ商品が追加されていません
+            </div>
+          ) : (
+            <ul className="max-h-40 overflow-y-auto space-y-2 pr-1">
+              {autoArrangeItems.map((item, index) => (
+                <li key={`${item.id}-${index}`} className="flex items-center justify-between gap-3 rounded-sm bg-white px-3 py-2 text-sm shadow-sm border border-gray-200">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium text-gray-900">{item.name}</div>
+                    <div className="text-xs text-gray-500">{item.price}円 / {item.width}×{item.height}</div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs text-gray-600"
+                    onClick={() => onRemoveAutoArrangeItem?.(index)}
+                  >
+                    削除
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
 
       {isLoading ? (
@@ -359,11 +439,18 @@ const getFilteredSweets = (category: string) => {
                 const filteredForCategory = getFilteredSweets(category)
                 return (
                   <TabsContent key={category} value={category} className="h-full overflow-y-auto">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2 sm:gap-4 pb-4 max-h-[40vh] lg:max-h-[60vh] overflow-y-auto">
+                    <div className="flex flex-col gap-2 pb-4 max-h-[40vh] lg:max-h-[60vh] overflow-y-auto">
                       {filteredForCategory.length > 0 ? (
-                        filteredForCategory.map((sweet) => <SweetItemComponent key={sweet.id} item={sweet} />)
+                        filteredForCategory.map((sweet) => (
+                          <SweetItemComponent
+                            key={sweet.id}
+                            item={sweet}
+                            onTap={autoArrangeMode ? onAddAutoArrangeItem : undefined}
+                            disableDragging={autoArrangeMode}
+                          />
+                        ))
                       ) : (
-                        <div className="col-span-2 sm:col-span-3 lg:col-span-2 text-center py-6 sm:py-8 text-gray-500 text-sm">このカテゴリの商品はありません</div>
+                        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm">このカテゴリの商品はありません</div>
                       )}
                     </div>
                   </TabsContent>
@@ -372,11 +459,11 @@ const getFilteredSweets = (category: string) => {
 
             {activeTab && (
               <TabsContent value="仕切り" className="h-full overflow-y-auto pr-2">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2 sm:gap-4 pb-4 max-h-[40vh] lg:max-h-[60vh] overflow-y-auto">
+                <div className="flex flex-col gap-2 pb-4 max-h-[40vh] lg:max-h-[60vh] overflow-y-auto">
                   {dividers.length > 0 ? (
                     dividers.map((divider) => <DividerItemComponent key={divider.id} item={divider} />)
                   ) : (
-                    <div className="col-span-2 sm:col-span-3 lg:col-span-2 text-center py-6 sm:py-8 text-gray-500 text-sm">仕切りアイテムはありません</div>
+                    <div className="text-center py-6 sm:py-8 text-gray-500 text-sm">仕切りアイテムはありません</div>
                   )}
                 </div>
               </TabsContent>
