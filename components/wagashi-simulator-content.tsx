@@ -140,7 +140,7 @@ export default function WagashiSimulatorContent({
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false)
   const [isAllergyFilterOpen, setIsAllergyFilterOpen] = useState(false)
   const [selectedAllergyFilters, setSelectedAllergyFilters] = useState<string[]>([])
-  const [companyMaxBoxSize, setCompanyMaxBoxSize] = useState<string | null>(null)
+  const [companyMaxBoxSize, setCompanyMaxBoxSize] = useState<BoxSize | null>(null)
   const [companyBoxDefs, setCompanyBoxDefs] = useState<AutoBoxDef[]>(BOX_TYPE_DEFS)
   const [autoArrangeMode, setAutoArrangeMode] = useState(false)
   const [autoArrangeItems, setAutoArrangeItems] = useState<SweetItem[]>([])
@@ -185,7 +185,7 @@ export default function WagashiSimulatorContent({
         setCompanyBoxDefs(normalizedDefs)
         const maxSize = normalizedDefs[normalizedDefs.length - 1].sizeStr
 
-        setCompanyMaxBoxSize(maxSize)
+        setCompanyMaxBoxSize(maxSize as BoxSize)
       } catch (error) {
         console.error("Failed to fetch box types for max-size check:", error)
       }
@@ -204,6 +204,83 @@ export default function WagashiSimulatorContent({
   const getAutoSelectedBox = (items: PlacedItem[]) => {
     const maxCm = getMaxPlacedCm(items)
     return getBoxDefForCm(maxCm)
+  }
+
+  const getAutoSelectedBoxByFFD = (items: SweetItem[]): AutoBoxDef => {
+    if (companyBoxDefs.length === 0) {
+      return BOX_TYPE_DEFS[BOX_TYPE_DEFS.length - 1]
+    }
+
+    if (items.length === 0) {
+      return companyBoxDefs[0]
+    }
+
+    const sortedItems = [...items].sort((a, b) => {
+      const areaA = a.width * a.height
+      const areaB = b.width * b.height
+
+      if (areaA !== areaB) {
+        return areaB - areaA
+      }
+
+      const sideA = Math.max(a.width, a.height)
+      const sideB = Math.max(b.width, b.height)
+      return sideB - sideA
+    })
+
+    const occupiedItems = placedItems.filter((item) => item.type !== "sweet")
+
+    for (const boxDef of companyBoxDefs) {
+      const boxWidth = Math.round(boxDef.size * 10)
+      const boxHeight = Math.round(boxDef.size * 10)
+      const placedItemsInBatch: PlacedItem[] = []
+      let canFitAll = true
+
+      for (const sweet of sortedItems) {
+        const width = Math.round(sweet.width * 10)
+        const height = Math.round(sweet.height * 10)
+
+        if (width > boxWidth || height > boxHeight) {
+          canFitAll = false
+          break
+        }
+
+        const packedPosition = findPackedPosition(
+          width,
+          height,
+          boxWidth,
+          boxHeight,
+          occupiedItems,
+          placedItemsInBatch,
+        )
+
+        if (!packedPosition) {
+          canFitAll = false
+          break
+        }
+
+        placedItemsInBatch.push({
+          id: generateId(),
+          itemId: sweet.id,
+          type: "sweet",
+          x: packedPosition.x,
+          y: packedPosition.y,
+          width,
+          height,
+          rotation: 0,
+          isLocked: false,
+          imageUrl: sweet.placedImageUrl || sweet.imageUrl || "",
+          name: sweet.name,
+          price: sweet.price,
+        })
+      }
+
+      if (canFitAll) {
+        return boxDef
+      }
+    }
+
+    return companyBoxDefs[companyBoxDefs.length - 1]
   }
 
   // 要素の参照
@@ -398,7 +475,11 @@ export default function WagashiSimulatorContent({
       return
     }
 
-    const [boxWidthCm, boxHeightCm] = boxSize.split("x").map(Number)
+    const optimalBox = getAutoSelectedBoxByFFD(autoArrangeItems)
+    const displayBoxSize = (companyMaxBoxSize ?? boxSize) as BoxSize
+    setBoxSize(displayBoxSize)
+
+    const [boxWidthCm, boxHeightCm] = optimalBox.sizeStr.split("x").map(Number)
     const boxWidth = Math.round(boxWidthCm * 10)
     const boxHeight = Math.round(boxHeightCm * 10)
     const occupiedItems = placedItems.filter((item) => item.type !== "sweet")
