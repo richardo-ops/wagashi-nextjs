@@ -1,5 +1,5 @@
 "use client"
-
+//各種import
 import type React from "react"
 
 import BoxArea from "@/components/box-area"
@@ -26,6 +26,7 @@ import { toast } from "sonner"
 // 選択中商品表示のモーダル（仮）
 import SelectItemModal from "@/components/select-item-modal"
 
+// 箱の初期値の設定
 type AutoBoxDef = {
   size: number
   sizeStr: BoxSize
@@ -33,19 +34,15 @@ type AutoBoxDef = {
   price: number
 }
 
-// Box type definitions (size in cm and price)
+// default値（削除ないし変更したほうがよい）
 const BOX_TYPE_DEFS: AutoBoxDef[] = [
-  { size: 22, sizeStr: "22x22", name: "B1", price: 220 },
-  { size: 25.5, sizeStr: "25.5x22", name: "B2", price: 220 },
-  { size: 28.5, sizeStr: "28.5x22", name: "B3", price: 275 },
-  { size: 32.5, sizeStr: "32.5x22", name: "B4", price: 275 },
-  { size: 35, sizeStr: "35x22", name: "B5", price: 330 },
-  { size: 37.5, sizeStr: "37.5x22", name: "B6", price: 330 },
-  { size: 39, sizeStr: "39x22", name: "B7", price: 330 },
-  { size: 42, sizeStr: "42x22", name: "B8", price: 385 },
-  { size: 45, sizeStr: "45x22", name: "B9", price: 385 },
+  { size: 22, sizeStr: "10x10", name: "B1", price: 100 },
+  { size: 25, sizeStr: "20x20", name: "B2", price: 200 },
+  { size: 28, sizeStr: "30x20", name: "B3", price: 300 },
+  { size: 30, sizeStr: "40x20", name: "B4", price: 400 },
 ]
 
+// 配置済み和菓子の右端位置を取得する関数
 function getMaxPlacedCm(items: any[]) {
   return Math.max(
     ...items
@@ -55,8 +52,9 @@ function getMaxPlacedCm(items: any[]) {
   )
 }
 
-
+// 箱サイズ文字列を解析して幅と高さを取得する関数
 function parseBoxSize(size: string) {
+  // "22x22" または "22×22" の形式を想定
   const [rawWidth, rawHeight] = size.replace(/[×*]/g, "x").split("x")
   const width = Number(rawWidth)
   const height = Number(rawHeight)
@@ -68,6 +66,8 @@ function parseBoxSize(size: string) {
   return { width, height }
 }
 
+// 2つの箱サイズ文字列を比較して、aがbより大きいかを判定する関数
+// ただし今は使っていない（将来的に箱サイズ選択のUIを変更する際などに利用する可能性あり）
 function isSizeGreater(a: string, b: string) {
   const parsedA = parseBoxSize(a)
   const parsedB = parseBoxSize(b)
@@ -102,6 +102,7 @@ interface WagashiSimulatorContentProps {
   onBoxTypeChange?: (boxType: BoxType | null) => void
 }
 
+// メインコンポーネント                                                                                                           
 export default function WagashiSimulatorContent({
   boxSize,
   setBoxSize,
@@ -148,6 +149,7 @@ export default function WagashiSimulatorContent({
   //追加： Next.js のルーター
   const router = useRouter()
 
+  // 画面幅の変化を監視してレイアウトを切り替える
   useEffect(() => {
     const mediaQuery = window.matchMedia("(min-width: 1024px)")
     const updateLayout = () => setIsDesktopLayout(mediaQuery.matches)
@@ -158,6 +160,7 @@ export default function WagashiSimulatorContent({
     return () => mediaQuery.removeEventListener("change", updateLayout)
   }, [])
 
+  // 企業ごとの箱サイズ定義を取得する
   useEffect(() => {
     const fetchCompanyBoxTypes = async () => {
       try {
@@ -167,6 +170,7 @@ export default function WagashiSimulatorContent({
         const boxTypes = (await response.json()) as BoxType[]
         if (!Array.isArray(boxTypes) || boxTypes.length === 0) return
 
+        // 箱サイズ定義を正規化して、数値のサイズと文字列のサイズを持つオブジェクトに変換
         const normalizedDefs = boxTypes
           .map((boxType) => {
             const parsed = parseBoxSize(boxType.size)
@@ -194,6 +198,7 @@ export default function WagashiSimulatorContent({
     fetchCompanyBoxTypes()
   }, [])
 
+  // 配置済み和菓子の右端位置に基づいて、適切な箱定義を取得する関数
   const getBoxDefForCm = (cm: number) => {
     return (
       companyBoxDefs.find((def) => cm <= def.size) ||
@@ -201,11 +206,14 @@ export default function WagashiSimulatorContent({
     )
   }
 
+  // 配置済み和菓子の右端位置に基づいて、適切な箱定義を自動選択する関数
   const getAutoSelectedBox = (items: PlacedItem[]) => {
+    // 50行目参照
     const maxCm = getMaxPlacedCm(items)
     return getBoxDefForCm(maxCm)
   }
 
+  // 配置済み和菓子の右端位置に基づいて、FFDアルゴリズムで適切な箱定義を自動選択する関数
   const getAutoSelectedBoxByFFD = (items: SweetItem[]): AutoBoxDef => {
     if (companyBoxDefs.length === 0) {
       return BOX_TYPE_DEFS[BOX_TYPE_DEFS.length - 1]
@@ -309,6 +317,7 @@ export default function WagashiSimulatorContent({
     }
   }, [])
 
+  // アレルギーフィルターの外側クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (!isAllergyFilterOpen) return
@@ -344,10 +353,12 @@ export default function WagashiSimulatorContent({
     window.location.reload()
   }
 
+  // 自動詰め合わせモードの切り替え
   const handleToggleAutoArrangeMode = () => {
     setAutoArrangeMode((prev) => !prev)
   }
 
+  // 自動詰め合わせリストに商品を追加する関数
   const handleAddAutoArrangeItem = (item: SweetItem) => {
     if (!item.inStock) {
       toast.error("在庫切れの商品は追加できません")
@@ -366,6 +377,7 @@ export default function WagashiSimulatorContent({
     setAutoArrangeItems([])
   }
 
+  // 2つの矩形が重なっているかを判定する関数
   const rectanglesOverlap = (
     leftA: number,
     topA: number,
@@ -384,6 +396,7 @@ export default function WagashiSimulatorContent({
     return !(rightA <= leftB || leftA >= rightB || bottomA <= topB || topA >= bottomB)
   }
 
+  // グリッドライン上の仕切りアイテムと重なっているかを判定する関数
   const intersectsGridLineDivider = (
     x: number,
     y: number,
@@ -440,6 +453,7 @@ export default function WagashiSimulatorContent({
     })
   }
 
+  // 自動詰め合わせの配置位置を見つける関数
   const findPackedPosition = (
     width: number,
     height: number,
@@ -469,6 +483,7 @@ export default function WagashiSimulatorContent({
     return null
   }
 
+  // 自動詰め合わせを実行する関数
   const handleExecuteAutoArrange = () => {
     if (autoArrangeItems.length === 0) {
       toast.error("詰め合わせリストに商品を追加してください")
@@ -541,6 +556,7 @@ export default function WagashiSimulatorContent({
     onBoxTypeChange?.(boxType)
   }
 
+  // アレルギーフィルターの切り替え
   const toggleAllergyFilter = (allergy: string) => {
     setSelectedAllergyFilters((prev) =>
       prev.includes(allergy) ? prev.filter((item) => item !== allergy) : [...prev, allergy]
@@ -568,10 +584,11 @@ export default function WagashiSimulatorContent({
     return Math.floor(sweetsTotal + boxPrice)
   }
 
-  // 選択中の箱（表示用） — B9 を選択している場合は配置位置に応じて実際の箱タイプを決定する
+  // 選択中の箱（表示用） 最大サイズの箱を選択している場合は、配置済み和菓子の右端位置に応じて動的に判定
   const getEffectiveBoxDef = () => {
     if (!selectedBoxType) return null
 
+    // 選択中の箱サイズを解析
     const parsedSelectedSize = parseBoxSize(selectedBoxType.size)
     const selectedBoxDef = companyBoxDefs.find((def) => def.sizeStr === selectedBoxType.size) ?? {
       size: parsedSelectedSize?.width ?? Number.parseFloat(selectedBoxType.size.split("x")[0]),
@@ -605,6 +622,7 @@ export default function WagashiSimulatorContent({
     return effectiveBoxDef.sizeStr
   }, [effectiveBoxDef, boxSize])
 
+  // 確定ボタンのハンドラー
   const handleConfirm = () => {
     if (hasOverlap) return
 
@@ -631,11 +649,13 @@ export default function WagashiSimulatorContent({
     }
   }
 
+  // 上限金額をクリアする関数
   const clearPriceLimit = () => {
     setPriceLimitStr("")
     setPriceLimit(null)
   }
 
+  // 上限金額の残り金額を計算する
   const remainingAmount = priceLimit !== null ? priceLimit - calculateTotalPrice() : null
 
   // 配置済み商品のグループ化（itemId ベース）
