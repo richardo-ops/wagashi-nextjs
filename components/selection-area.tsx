@@ -25,6 +25,8 @@ interface SelectionAreaProps {
   onRemoveAutoArrangeItem?: (index: number) => void
   onClearAutoArrangeItems?: () => void
   onExecuteAutoArrange?: () => void
+  // 追加: 全自動詰め合わせを実行するためのコールバック
+  onExecuteFullAutoArrange?: (items: SweetItem[]) => void
 }
 
 export default function SelectionArea({
@@ -40,6 +42,8 @@ export default function SelectionArea({
   onRemoveAutoArrangeItem,
   onClearAutoArrangeItems,
   onExecuteAutoArrange,
+  // 追加: 全自動詰め合わせを実行するためのコールバック
+  onExecuteFullAutoArrange,
 }: SelectionAreaProps) {
   const [activeTab, setActiveTab] = useState("餅菓子")
   const [sweets, setSweets] = useState<SweetItem[]>([])
@@ -203,20 +207,20 @@ export default function SelectionArea({
     }
   }
 
-  
-// 指定したカテゴリに対する検索＋カテゴリフィルタを返すヘルパー
-const getFilteredSweets = (category: string) => {
-  const term = (searchTerm ?? "").trim().toLowerCase()
-  const blockedAllergies = excludedAllergies
-    .map((allergy) => allergy.trim().toLowerCase())
-    .filter((allergy) => allergy.length > 0)
-
+  // アレルギー情報を正規化する関数
   const normalizeAllergyTokens = (allergies: string[]) => {
     return allergies
       .flatMap((allergy) => allergy.split(/[,、]/g))
       .map((allergy) => allergy.trim().toLowerCase())
       .filter((allergy) => allergy.length > 0 && allergy !== "該当なし")
   }
+
+// 指定したカテゴリに対する検索＋カテゴリフィルタを返すヘルパー
+const getFilteredSweets = (category: string) => {
+  const term = (searchTerm ?? "").trim().toLowerCase()
+  const blockedAllergies = excludedAllergies
+    .map((allergy) => allergy.trim().toLowerCase())
+    .filter((allergy) => allergy.length > 0)
 
   return sweets.filter((s) => {
     // 在庫が0個の商品は表示しない
@@ -244,6 +248,38 @@ const getFilteredSweets = (category: string) => {
     return inName || inDesc
   })
 }
+  // 全自動詰め合わせの対象となる商品を取得する関数
+  const getEligibleSweetsForFullAuto = () => {
+    const blockedAllergies = excludedAllergies
+      .map((allergy) => allergy.trim().toLowerCase())
+      .filter((allergy) => allergy.length > 0)
+
+    return sweets.filter((s) => {
+      if ((s.stockQuantity ?? 0) <= 0) return false
+
+      if (blockedAllergies.length === 0) return true
+
+      const sweetAllergies = normalizeAllergyTokens(s.allergies || [])
+      const hasBlockedAllergy = sweetAllergies.some((allergy) => blockedAllergies.includes(allergy))
+      return !hasBlockedAllergy
+    })
+  }
+
+  const handleFullAutoArrange = () => {
+    const eligibleSweets = getEligibleSweetsForFullAuto()
+
+    if (eligibleSweets.length === 0) {
+      return
+    }
+
+    const shuffled = [...eligibleSweets].sort(() => Math.random() - 0.5)
+    const minPickCount = Math.min(4, shuffled.length)
+    const maxPickCount = Math.min(10, shuffled.length)
+    const pickCount = minPickCount + Math.floor(Math.random() * (maxPickCount - minPickCount + 1))
+    const pickedItems = shuffled.slice(0, pickCount)
+
+    onExecuteFullAutoArrange?.(pickedItems)
+  }
 
   const filteredForActiveTab = activeTab ? getFilteredSweets(activeTab) : []
 
@@ -330,6 +366,16 @@ const getFilteredSweets = (category: string) => {
                 disabled={autoArrangeItems.length === 0}
               >
                 クリア
+              </Button>
+              {/* 全自動詰め合わせボタン */}
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs px-2 py-1 h-7"
+                onClick={handleFullAutoArrange}
+                disabled={isLoading || sweets.length === 0}
+              >
+                全自動
               </Button>
               <Button
                 size="sm"

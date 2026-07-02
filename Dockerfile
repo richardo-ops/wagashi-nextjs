@@ -18,6 +18,7 @@ WORKDIR /app
 COPY ./package.json ./
 COPY ./prisma ./prisma
 
+# renderではじかれないためのpnpmバージョン固定
 RUN npm install -g pnpm@8 && pnpm install
 
 COPY . .

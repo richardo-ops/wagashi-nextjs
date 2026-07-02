@@ -483,71 +483,139 @@ export default function WagashiSimulatorContent({
     return null
   }
 
+  const sortAutoArrangeItems = (items: SweetItem[], strategy: "area" | "maxSide" | "width" | "height") => {
+    return [...items].sort((a, b) => {
+      switch (strategy) {
+        case "width":
+          return b.width - a.width || b.height - a.height
+        case "height":
+          return b.height - a.height || b.width - a.width
+        case "maxSide": {
+          const maxSideA = Math.max(a.width, a.height)
+          const maxSideB = Math.max(b.width, b.height)
+          return maxSideB - maxSideA || (b.width * b.height) - (a.width * a.height)
+        }
+        case "area":
+        default: {
+          const areaA = a.width * a.height
+          const areaB = b.width * b.height
+          return areaB - areaA || Math.max(b.width, b.height) - Math.max(a.width, a.height)
+        }
+      }
+    })
+  }
+
+  const tryPackItems = (
+    targetItems: SweetItem[],
+    boxWidth: number,
+    boxHeight: number,
+    occupiedItems: PlacedItem[],
+  ) => {
+    const strategies: Array<"area" | "maxSide" | "width" | "height"> = ["area", "maxSide", "width", "height"]
+
+    for (const strategy of strategies) {
+      const packedOrder = sortAutoArrangeItems(targetItems, strategy)
+      const nextPlacedItems: PlacedItem[] = []
+      let canPackAll = true
+
+      for (const sweet of packedOrder) {
+        const width = Math.round(sweet.width * 10)
+        const height = Math.round(sweet.height * 10)
+
+        if (width > boxWidth || height > boxHeight) {
+          canPackAll = false
+          break
+        }
+
+        const packedPosition = findPackedPosition(width, height, boxWidth, boxHeight, occupiedItems, nextPlacedItems)
+
+        if (!packedPosition) {
+          canPackAll = false
+          break
+        }
+
+        nextPlacedItems.push({
+          id: generateId(),
+          itemId: sweet.id,
+          type: "sweet",
+          x: packedPosition.x,
+          y: packedPosition.y,
+          width,
+          height,
+          rotation: 0,
+          isLocked: false,
+          imageUrl: sweet.placedImageUrl || sweet.imageUrl || "",
+          name: sweet.name,
+          price: sweet.price,
+        })
+      }
+
+      if (canPackAll) {
+        return nextPlacedItems
+      }
+    }
+
+    return null
+  }
+
   // 自動詰め合わせを実行する関数
   const handleExecuteAutoArrange = () => {
-    if (autoArrangeItems.length === 0) {
+    executeAutoArrangeWithItems(autoArrangeItems)
+  }
+
+  const executeAutoArrangeWithItems = (targetItems: SweetItem[]) => {
+    if (targetItems.length === 0) {
       toast.error("詰め合わせリストに商品を追加してください")
       return
     }
 
-    const optimalBox = getAutoSelectedBoxByFFD(autoArrangeItems)
-    const displayBoxSize = (companyMaxBoxSize ?? boxSize) as BoxSize
-    setBoxSize(displayBoxSize)
+    const optimalBox = getAutoSelectedBoxByFFD(targetItems)
+    const selectedBoxIndex = Math.max(
+      0,
+      companyBoxDefs.findIndex((def) => def.sizeStr === optimalBox.sizeStr),
+    )
 
-    const [boxWidthCm, boxHeightCm] = optimalBox.sizeStr.split("x").map(Number)
-    const boxWidth = Math.round(boxWidthCm * 10)
-    const boxHeight = Math.round(boxHeightCm * 10)
     const occupiedItems = placedItems.filter((item) => item.type !== "sweet")
-    const nextPlacedItems: PlacedItem[] = []
-    const packedOrder = [...autoArrangeItems].sort((a, b) => {
-      const areaA = a.width * a.height
-      const areaB = b.width * b.height
+    let nextPlacedItems: PlacedItem[] | null = null
+    let chosenBoxSize: BoxSize | null = null
 
-      if (areaA !== areaB) {
-        return areaB - areaA
+    for (let index = selectedBoxIndex; index < companyBoxDefs.length; index += 1) {
+      const boxDef = companyBoxDefs[index]
+      const [boxWidthCm, boxHeightCm] = boxDef.sizeStr.split("x").map(Number)
+      const boxWidth = Math.round(boxWidthCm * 10)
+      const boxHeight = Math.round(boxHeightCm * 10)
+
+      const packedItems = tryPackItems(targetItems, boxWidth, boxHeight, occupiedItems)
+      if (packedItems) {
+        nextPlacedItems = packedItems
+        chosenBoxSize = boxDef.sizeStr
+        break
       }
-
-      const sideA = Math.max(a.width, a.height)
-      const sideB = Math.max(b.width, b.height)
-      return sideB - sideA
-    })
-
-    for (const sweet of packedOrder) {
-      const width = Math.round(sweet.width * 10)
-      const height = Math.round(sweet.height * 10)
-
-      if (width > boxWidth || height > boxHeight) {
-        toast.error(`${sweet.name} は現在の箱に入りません`)
-        return
-      }
-
-      const packedPosition = findPackedPosition(width, height, boxWidth, boxHeight, occupiedItems, nextPlacedItems)
-
-      if (!packedPosition) {
-        toast.error(`${sweet.name} を配置できませんでした。詰め合わせリストを減らしてください`)
-        return
-      }
-
-      nextPlacedItems.push({
-        id: generateId(),
-        itemId: sweet.id,
-        type: "sweet",
-        x: packedPosition.x,
-        y: packedPosition.y,
-        width,
-        height,
-        rotation: 0,
-        isLocked: false,
-        imageUrl: sweet.placedImageUrl || sweet.imageUrl || "",
-        name: sweet.name,
-        price: sweet.price,
-      })
     }
+
+    if (!nextPlacedItems || !chosenBoxSize) {
+      toast.error("自動詰め合わせを実行できませんでした。箱サイズまたは商品順を調整してください")
+      return
+    }
+
+    const displayBoxSize = (companyMaxBoxSize ?? chosenBoxSize) as BoxSize
+    setBoxSize(displayBoxSize)
 
     setPlacedItems([...occupiedItems, ...nextPlacedItems])
     setAutoArrangeItems([])
     setAutoArrangeMode(false)
     toast.success("自動詰め合わせを実行しました")
+  }
+  // 全自動詰め合わせを実行する関数
+  const handleExecuteFullAutoArrange = (randomItems: SweetItem[]) => {
+    if (randomItems.length === 0) {
+      toast.error("全自動対象の商品がありません")
+      return
+    }
+
+    setAutoArrangeMode(true)
+    setAutoArrangeItems(randomItems)
+    executeAutoArrangeWithItems(randomItems)
   }
 
   // 箱選択のハンドラー
@@ -1113,6 +1181,7 @@ export default function WagashiSimulatorContent({
                 onRemoveAutoArrangeItem={handleRemoveAutoArrangeItem}
                 onClearAutoArrangeItems={handleClearAutoArrangeItems}
                 onExecuteAutoArrange={handleExecuteAutoArrange}
+                onExecuteFullAutoArrange={handleExecuteFullAutoArrange}
               />
             </div>
             
@@ -1210,6 +1279,7 @@ export default function WagashiSimulatorContent({
                   onRemoveAutoArrangeItem={handleRemoveAutoArrangeItem}
                   onClearAutoArrangeItems={handleClearAutoArrangeItems}
                   onExecuteAutoArrange={handleExecuteAutoArrange}
+                  onExecuteFullAutoArrange={handleExecuteFullAutoArrange}
                 />
               </div>
             </div>
