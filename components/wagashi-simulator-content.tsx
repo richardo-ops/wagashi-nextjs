@@ -505,6 +505,28 @@ export default function WagashiSimulatorContent({
     })
   }
 
+  const getPlacementVariants = (item: SweetItem) => {
+    // 正位置
+    const baseVariant = {
+      width: Math.round(item.width * 10),
+      height: Math.round(item.height * 10),
+      rotation: 0 as const,
+    }
+    // 90度回転
+    const rotatedVariant = {
+      width: Math.round(item.height * 10),
+      height: Math.round(item.width * 10),
+      rotation: 90 as const,
+    }
+
+    // 正方形の場合は1つのバリアントのみ返す
+    if (baseVariant.width === rotatedVariant.width && baseVariant.height === rotatedVariant.height) {
+      return [baseVariant]
+    }
+
+    return [baseVariant, rotatedVariant]
+  }
+
   const tryPackItems = (
     targetItems: SweetItem[],
     boxWidth: number,
@@ -519,17 +541,38 @@ export default function WagashiSimulatorContent({
       let canPackAll = true
 
       for (const sweet of packedOrder) {
-        const width = Math.round(sweet.width * 10)
-        const height = Math.round(sweet.height * 10)
+        // 各和菓子の配置バリアントを取得
+        const placementVariants = getPlacementVariants(sweet)
+        let placedVariant: {
+          width: number
+          height: number
+          rotation: 0 | 90
+          x: number
+          y: number
+        } | null = null
 
-        if (width > boxWidth || height > boxHeight) {
-          canPackAll = false
-          break
+        for (const variant of placementVariants) {
+          if (variant.width > boxWidth || variant.height > boxHeight) {
+            continue
+          }
+
+          // 457行目参照
+          const packedPosition = findPackedPosition(
+            variant.width,
+            variant.height,
+            boxWidth,
+            boxHeight,
+            occupiedItems,
+            nextPlacedItems,
+          )
+
+          if (packedPosition) {
+            placedVariant = { ...variant, ...packedPosition }
+            break
+          }
         }
 
-        const packedPosition = findPackedPosition(width, height, boxWidth, boxHeight, occupiedItems, nextPlacedItems)
-
-        if (!packedPosition) {
+        if (!placedVariant) {
           canPackAll = false
           break
         }
@@ -538,11 +581,11 @@ export default function WagashiSimulatorContent({
           id: generateId(),
           itemId: sweet.id,
           type: "sweet",
-          x: packedPosition.x,
-          y: packedPosition.y,
-          width,
-          height,
-          rotation: 0,
+          x: placedVariant.x,
+          y: placedVariant.y,
+          width: placedVariant.width,
+          height: placedVariant.height,
+          rotation: placedVariant.rotation,
           isLocked: false,
           imageUrl: sweet.placedImageUrl || sweet.imageUrl || "",
           name: sweet.name,
