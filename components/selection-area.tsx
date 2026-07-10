@@ -60,7 +60,7 @@ export default function SelectionArea({
   const getCategories = () => {
     const sweetCategories = [...new Set(sweets.map(sweet => sweet.category))]
     //const dividerCategories = ["仕切り"]
-    const allCategories = ["全て",...sweetCategories/*, ...dividerCategories*/]
+    const allCategories = ["全て","おすすめ",...sweetCategories/*, ...dividerCategories*/]
     console.log("生成されたカテゴリー:", allCategories)
     console.log("商品のカテゴリー一覧:", sweetCategories)
     return allCategories

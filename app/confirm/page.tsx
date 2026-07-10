@@ -8,7 +8,7 @@ import type { PlacedItem, BoxSize, BoxType } from "@/types/types"
 export default function ConfirmPage() {
   const router = useRouter()
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([])
-  const [boxSize, setBoxSize] = useState<BoxSize>("22x22")
+  const [boxSize, setBoxSize] = useState<BoxSize>("20x20")
   const [selectedBoxType, setSelectedBoxType] = useState<BoxType | null>(null)
   const [products, setProducts] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
