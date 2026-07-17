@@ -3,14 +3,34 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import ConfirmComplete from "@/components/confirm-complete"
-import type { PlacedItem, BoxSize, BoxType } from "@/types/types"
+// 配置済み商品、箱サイズ、箱タイプ、商品情報の型をインポート
+import type { PlacedItem, BoxSize, BoxType, Product } from "@/types/types"
+
+type StoredProduct = {
+  itemId?: string
+  id?: string
+  name?: string
+  qty?: number
+  price?: number
+  image?: string
+  imageUrl?: string
+}
+
+const normalizeProduct = (product: StoredProduct): Product => ({
+  id: product.id ?? product.itemId ?? product.name ?? "",
+  name: product.name ?? "",
+  qty: Number.isFinite(product.qty) && (product.qty ?? 0) > 0 ? Number(product.qty) : 1,
+  price: Number(product.price ?? 0),
+  image: product.image ?? product.imageUrl ?? "",
+})
 
 export default function ConfirmCompletePage() {
   const router = useRouter()
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([])
   const [boxSize, setBoxSize] = useState<BoxSize>("20x20")
   const [selectedBoxType, setSelectedBoxType] = useState<BoxType | null>(null)
-  const [products, setProducts] = useState<any[]>([])
+  // sessionStorageから取得した商品情報を格納する状態
+  const [products, setProducts] = useState<Product[]>([])
   const [needsNoshi, setNeedsNoshi] = useState(false)
   const [needsBag, setNeedsBag] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -38,7 +58,9 @@ export default function ConfirmCompletePage() {
       }
 
       if (storedProducts) {
-        setProducts(JSON.parse(storedProducts))
+        // sessionStorageから取得した商品情報を正規化して状態にセット
+        const parsedProducts = JSON.parse(storedProducts) as StoredProduct[]
+        setProducts(parsedProducts.map(normalizeProduct))
       }
 
       if (storedNeedsNoshi) {

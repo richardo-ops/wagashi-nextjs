@@ -6,6 +6,8 @@ import type { PlacedItem, BoxSize, BoxType } from "@/types/types"
 
 import type {Product, BagOption} from "@/types/types"
 import {BAG_OPTIONS} from "@/types/types"
+// 購入履歴の型と関数をインポート
+import { recordPurchasedItems } from "@/lib/purchase-history"
 
 
 type Props = {
@@ -155,6 +157,19 @@ export default function ConfirmScreen({
 
   const total = Math.floor(productTotal*1.08 + boxPrice + bagPrice);
   const tabs = ["商品", "アレルゲン", "のし", "袋"]
+  // 購入ボタン押下時の処理
+  const handlePurchaseClick = () => {
+    const purchasedItems = products
+      .map((product, index) => ({
+        itemId: (product.id ?? (product as any).itemId ?? product.name ?? `product-${index}`).toString(),
+        qty: Number.isFinite(product.qty) && product.qty > 0 ? product.qty : 1,
+        name: product.name,
+      }))
+      .filter((item) => item.itemId.length > 0)
+
+    recordPurchasedItems(purchasedItems)
+    setIsComplete(true)
+  }
 
   if (isComplete) {
     const ConfirmComplete = require("./confirm-complete.tsx").default
@@ -387,7 +402,7 @@ export default function ConfirmScreen({
             {/* 購入ボタン */}
             <div>
               <button
-                onClick={() => setIsComplete(true)}
+                onClick={handlePurchaseClick}
                 className="px-6 py-2 rounded-full bg-gradient-to-tr from-blue-400 to-blue-500 text-white font-semibold shadow"
               >
                 購入
