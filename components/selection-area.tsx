@@ -11,6 +11,8 @@ import DividerItemComponent from "./divider-item"
 import { fetchSweets, fetchDividers } from "@/services/api-service"
 import { Loader2, ChevronLeft, ChevronRight, RefreshCw, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
+// 購入履歴の型と関数をインポート
+import { PURCHASE_HISTORY_UPDATED_EVENT, getRecommendedSweets } from "@/lib/purchase-history"
 
 interface SelectionAreaProps {
   placedItems: PlacedItem[]
@@ -25,6 +27,8 @@ interface SelectionAreaProps {
   onRemoveAutoArrangeItem?: (index: number) => void
   onClearAutoArrangeItems?: () => void
   onExecuteAutoArrange?: () => void
+  // 追加: 全自動詰め合わせを実行するためのコールバック
+  onExecuteFullAutoArrange?: (items: SweetItem[]) => void
 }
 
 export default function SelectionArea({
@@ -40,9 +44,12 @@ export default function SelectionArea({
   onRemoveAutoArrangeItem,
   onClearAutoArrangeItems,
   onExecuteAutoArrange,
+  // 追加: 全自動詰め合わせを実行するためのコールバック
+  onExecuteFullAutoArrange,
 }: SelectionAreaProps) {
   const [activeTab, setActiveTab] = useState("餅菓子")
   const [sweets, setSweets] = useState<SweetItem[]>([])
+  const [recommendedSweets, setRecommendedSweets] = useState<SweetItem[]>([])
   const [dividers, setDividers] = useState<DividerItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -56,14 +63,14 @@ export default function SelectionArea({
   const getCategories = () => {
     const sweetCategories = [...new Set(sweets.map(sweet => sweet.category))]
     //const dividerCategories = ["仕切り"]
-    const allCategories = ["全て",...sweetCategories/*, ...dividerCategories*/]
+    const allCategories = ["全て", "おすすめ", ...sweetCategories/*, ...dividerCategories*/]
     console.log("生成されたカテゴリー:", allCategories)
     console.log("商品のカテゴリー一覧:", sweetCategories)
     return allCategories
   }
 
   // 初期カテゴリー（データ読み込み前用）
-  const initialCategories = ["全て","焼き菓子", "餅菓子", "水菓子", "干菓子", "蒸し菓子", "季節限定", "伝統菓子", "和菓子", "洋菓子"]
+  const initialCategories = ["全て", "おすすめ", "焼き菓子", "餅菓子", "水菓子", "干菓子", "蒸し菓子", "季節限定", "伝統菓子", "和菓子", "洋菓子"]
   
   const categories = sweets.length > 0 ? getCategories() : initialCategories
 
@@ -120,9 +127,11 @@ export default function SelectionArea({
       if (inventoryData && inventoryData.length > 0) {
         console.log("在庫データを使用:", inventoryData)
         setSweets(inventoryData)
+        setRecommendedSweets(getRecommendedSweets(inventoryData))
       } else {
         console.log("APIデータを使用:", sweetsData)
         setSweets(sweetsData)
+        setRecommendedSweets(getRecommendedSweets(sweetsData))
       }
 
       setDividers(dividersData)
@@ -131,6 +140,7 @@ export default function SelectionArea({
       setError("データベースからデータの読み込みに失敗しました。管理画面で商品を追加してください。")
       // エラー時は空の配列を設定
       setSweets([])
+      setRecommendedSweets([])
       setDividers([])
     } finally {
       setIsLoading(false)
@@ -141,6 +151,10 @@ export default function SelectionArea({
   useEffect(() => {
     loadData()
   }, [inventoryData])
+
+  useEffect(() => {
+    setRecommendedSweets(getRecommendedSweets(sweets))
+  }, [sweets])
 
   // 在庫更新イベントのリスナーを追加
   useEffect(() => {
@@ -163,8 +177,21 @@ export default function SelectionArea({
     const globalUpdatedSweets = (window as any).updatedSweetsData
     if (globalUpdatedSweets) {
       setSweets(globalUpdatedSweets)
+      setRecommendedSweets(getRecommendedSweets(globalUpdatedSweets))
     }
   }, [])
+
+  useEffect(() => {
+    const handlePurchaseHistoryUpdate = () => {
+      setRecommendedSweets(getRecommendedSweets(sweets))
+    }
+
+    window.addEventListener(PURCHASE_HISTORY_UPDATED_EVENT, handlePurchaseHistoryUpdate)
+
+    return () => {
+      window.removeEventListener(PURCHASE_HISTORY_UPDATED_EVENT, handlePurchaseHistoryUpdate)
+    }
+  }, [sweets])
 
   // タブのスクロール状態を確認する関数
   const checkScrollPosition = () => {
@@ -203,20 +230,43 @@ export default function SelectionArea({
     }
   }
 
-  
-// 指定したカテゴリに対する検索＋カテゴリフィルタを返すヘルパー
-const getFilteredSweets = (category: string) => {
-  const term = (searchTerm ?? "").trim().toLowerCase()
-  const blockedAllergies = excludedAllergies
-    .map((allergy) => allergy.trim().toLowerCase())
-    .filter((allergy) => allergy.length > 0)
-
+  // アレルギー情報を正規化する関数
   const normalizeAllergyTokens = (allergies: string[]) => {
     return allergies
       .flatMap((allergy) => allergy.split(/[,、]/g))
       .map((allergy) => allergy.trim().toLowerCase())
       .filter((allergy) => allergy.length > 0 && allergy !== "該当なし")
   }
+
+// 指定したカテゴリに対する検索＋カテゴリフィルタを返すヘルパー
+const getFilteredSweets = (category: string) => {
+    if (category === "おすすめ") {
+      const term = (searchTerm ?? "").trim().toLowerCase()
+      const blockedAllergies = excludedAllergies
+        .map((allergy) => allergy.trim().toLowerCase())
+        .filter((allergy) => allergy.length > 0)
+
+      return recommendedSweets.filter((s) => {
+        if ((s.stockQuantity ?? 0) <= 0) return false
+
+        if (blockedAllergies.length > 0) {
+          const sweetAllergies = normalizeAllergyTokens(s.allergies || [])
+          const hasBlockedAllergy = sweetAllergies.some((allergy) => blockedAllergies.includes(allergy))
+          if (hasBlockedAllergy) return false
+        }
+
+        if (!term) return true
+
+        const name = (s.name ?? "").toLowerCase()
+        const desc = (s.description ?? "").toLowerCase()
+        return name.includes(term) || desc.includes(term)
+      })
+    }
+
+  const term = (searchTerm ?? "").trim().toLowerCase()
+  const blockedAllergies = excludedAllergies
+    .map((allergy) => allergy.trim().toLowerCase())
+    .filter((allergy) => allergy.length > 0)
 
   return sweets.filter((s) => {
     // 在庫が0個の商品は表示しない
@@ -244,6 +294,38 @@ const getFilteredSweets = (category: string) => {
     return inName || inDesc
   })
 }
+  // 全自動詰め合わせの対象となる商品を取得する関数
+  const getEligibleSweetsForFullAuto = () => {
+    const blockedAllergies = excludedAllergies
+      .map((allergy) => allergy.trim().toLowerCase())
+      .filter((allergy) => allergy.length > 0)
+
+    return sweets.filter((s) => {
+      if ((s.stockQuantity ?? 0) <= 0) return false
+
+      if (blockedAllergies.length === 0) return true
+
+      const sweetAllergies = normalizeAllergyTokens(s.allergies || [])
+      const hasBlockedAllergy = sweetAllergies.some((allergy) => blockedAllergies.includes(allergy))
+      return !hasBlockedAllergy
+    })
+  }
+
+  const handleFullAutoArrange = () => {
+    const eligibleSweets = getEligibleSweetsForFullAuto()
+
+    if (eligibleSweets.length === 0) {
+      return
+    }
+
+    const shuffled = [...eligibleSweets].sort(() => Math.random() - 0.5)
+    const minPickCount = Math.min(4, shuffled.length)
+    const maxPickCount = Math.min(10, shuffled.length)
+    const pickCount = minPickCount + Math.floor(Math.random() * (maxPickCount - minPickCount + 1))
+    const pickedItems = shuffled.slice(0, pickCount)
+
+    onExecuteFullAutoArrange?.(pickedItems)
+  }
 
   const filteredForActiveTab = activeTab ? getFilteredSweets(activeTab) : []
 
@@ -330,6 +412,16 @@ const getFilteredSweets = (category: string) => {
                 disabled={autoArrangeItems.length === 0}
               >
                 クリア
+              </Button>
+              {/* 全自動詰め合わせボタン */}
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs px-2 py-1 h-7"
+                onClick={handleFullAutoArrange}
+                disabled={isLoading || sweets.length === 0}
+              >
+                全自動
               </Button>
               <Button
                 size="sm"

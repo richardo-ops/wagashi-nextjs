@@ -677,6 +677,10 @@ openssl s_client -connect aws-0-ap-northeast-1.pooler.supabase.com:5432 -brief <
 
 ## TO DO List
 
+店舗ごとの箱の有効設定
+商品一覧のリストor画像の表示切替
+スマレジとの連携
+購買情報を活用したAI機能の実装
 自動化の仕組みの確立
 電光掲示板に商品一覧を表示、客が商品をおして詰め合わせ作成
 自動レジに送信、キャッチして中で詰める

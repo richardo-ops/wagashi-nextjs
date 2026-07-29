@@ -1,5 +1,5 @@
 "use client"
-
+// Reactのインポート
 import type React from "react"
 
 // 既存のインポート
@@ -66,7 +66,12 @@ export default function BoxArea({
   // 仕切り長さ調整用の状態
   const [resizingDivider, setResizingDivider] = useState<PlacedItem | null>(null)
 
-  const currentBoxLengthCm = Number(boxSize.split("x")[0])
+  const parseBoxDimensions = useCallback((size: string) => {
+    const [widthCm, heightCm] = size.split("x").map((value) => Number.parseFloat(value))
+    return { widthCm, heightCm }
+  }, [])
+
+  const currentBoxDimensions = useMemo(() => parseBoxDimensions(boxSize), [boxSize, parseBoxDimensions])
 
   useEffect(() => {
     const loadBoxTypes = async () => {
@@ -88,42 +93,60 @@ export default function BoxArea({
     loadBoxTypes()
   }, [])
 
-  const guideDividerSizesCm = useMemo(() => {
-    const parsedSizes = boxTypes
-      .map((boxType) => Number.parseFloat(boxType.size.split("x")[0]))
-      .filter((size) => Number.isFinite(size) && size > 0)
+  const guideDividerBoxes = useMemo(() => {
+    const parsedBoxSizes = boxTypes
+      .map((boxType) => ({
+        boxType,
+        ...parseBoxDimensions(boxType.size),
+      }))
+      .filter(({ widthCm, heightCm }) => Number.isFinite(widthCm) && Number.isFinite(heightCm) && widthCm > 0 && heightCm > 0)
 
-    const uniqueSizes = Array.from(new Set(parsedSizes)).sort((a, b) => a - b)
-    const largestSize = uniqueSizes[uniqueSizes.length - 1] ?? currentBoxLengthCm
+    const largestBox = parsedBoxSizes.reduce<{ widthCm: number; heightCm: number } | null>((largest, current) => {
+      if (!largest) return { widthCm: current.widthCm, heightCm: current.heightCm }
+      if (current.widthCm > largest.widthCm) return { widthCm: current.widthCm, heightCm: current.heightCm }
+      if (current.widthCm === largest.widthCm && current.heightCm > largest.heightCm) {
+        return { widthCm: current.widthCm, heightCm: current.heightCm }
+      }
+      return largest
+    }, null)
 
-    if (currentBoxLengthCm !== largestSize) {
-      return []
+    // 現在選択中の箱がその企業の最大サイズでない場合は描画しない
+    if (!largestBox || currentBoxDimensions.widthCm !== largestBox.widthCm || currentBoxDimensions.heightCm !== largestBox.heightCm) {
+      return [] as Array<{ widthCm: number; heightCm: number }>
     }
 
-    return uniqueSizes.filter((size) => size < largestSize)
-  }, [boxTypes, currentBoxLengthCm])
+    // 最大サイズより小さい箱を、箱の輪郭として描画する
+    return parsedBoxSizes
+      .filter(({ widthCm, heightCm }) => widthCm <= largestBox.widthCm || heightCm <= largestBox.heightCm)
+      .sort((a, b) => a.widthCm - b.widthCm || a.heightCm - b.heightCm)
+      .map(({ widthCm, heightCm }) => ({ widthCm, heightCm }))
+  }, [boxTypes, currentBoxDimensions, parseBoxDimensions])
 
-  const shouldShowDynamicGuideDivider = guideDividerSizesCm.length > 0
+  // 仕切りガイドの表示条件を計算(True/False)
+  const shouldShowDynamicGuideDivider = guideDividerBoxes.length > 0
 
-  const activeGuideDividerSizeCm = useMemo(() => {
-    if (!shouldShowDynamicGuideDivider || boxTypes.length === 0) return null
+  const activeGuideDividerBox = useMemo(() => {
+    if (!shouldShowDynamicGuideDivider || guideDividerBoxes.length === 0) return null
 
-    const sortedSizes = boxTypes
-      .map((boxType) => Number.parseFloat(boxType.size.split("x")[0]))
-      .filter((size) => Number.isFinite(size) && size > 0)
-      .sort((a, b) => a - b)
-
-    if (sortedSizes.length === 0) return null
-
-    const maxPlacedCm = Math.max(
+    const maxPlacedWidthCm = Math.max(
       ...placedItems
         .filter((item) => item.type === "sweet")
         .map((item) => (item.x + item.width) / 10),
       0,
     )
 
-    return sortedSizes.find((size) => maxPlacedCm <= size) ?? sortedSizes[sortedSizes.length - 1]
-  }, [boxTypes, placedItems, shouldShowDynamicGuideDivider])
+    const maxPlacedHeightCm = Math.max(
+      ...placedItems
+        .filter((item) => item.type === "sweet")
+        .map((item) => (item.y + item.height) / 10),
+      0,
+    )
+
+    return (
+      guideDividerBoxes.find(({ widthCm, heightCm }) => maxPlacedWidthCm <= widthCm && maxPlacedHeightCm <= heightCm) ??
+      guideDividerBoxes[guideDividerBoxes.length - 1]
+    )
+  }, [guideDividerBoxes, placedItems, shouldShowDynamicGuideDivider])
 
   // 表示上の最大サイズを定義（cm単位の箱サイズに基づいて計算）
   const getMaxDisplaySize = () => {
@@ -1259,19 +1282,36 @@ export default function BoxArea({
         {/* 最大箱選択時は、DBの箱サイズに対応する仕切り線を描画 */}
         {shouldShowDynamicGuideDivider && (
           <>
-            {guideDividerSizesCm.map((dividerSizeCm) => (
+            {guideDividerBoxes.map(({ widthCm, heightCm }) => (
               <div
-                key={`guide-divider-${dividerSizeCm}`}
+                key={`guide-divider-width-${widthCm}-${heightCm}`}
                 className="absolute pointer-events-none"
                 style={{
-                  left: `${dividerSizeCm * 10 * cellSize}px`,
+                  left: `${widthCm * 10 * cellSize}px`,
                   top: 0,
-                  bottom: 0,
                   width: "0px",
                   borderLeft:
-                    dividerSizeCm === activeGuideDividerSizeCm
+                    activeGuideDividerBox && widthCm === activeGuideDividerBox.widthCm && heightCm === activeGuideDividerBox.heightCm
                       ? "4px solid var(--color-indigo)"
                       : "1px solid rgba(79, 70, 229, 0.25)",
+                  height: `${heightCm * 10 * cellSize}px`,
+                  zIndex: 20,
+                }}
+              />
+            ))}
+            {guideDividerBoxes.map(({ widthCm, heightCm }) => (
+              <div
+                key={`guide-divider-height-${widthCm}-${heightCm}`}
+                className="absolute pointer-events-none"
+                style={{
+                  top: `${heightCm * 10 * cellSize}px`,
+                  left: 0,
+                  height: "0px",
+                  borderTop:
+                    activeGuideDividerBox && widthCm === activeGuideDividerBox.widthCm && heightCm === activeGuideDividerBox.heightCm
+                      ? "4px solid var(--color-indigo)"
+                      : "1px solid rgba(79, 70, 229, 0.25)",
+                  width: `${widthCm * 10 * cellSize}px`,
                   zIndex: 20,
                 }}
               />

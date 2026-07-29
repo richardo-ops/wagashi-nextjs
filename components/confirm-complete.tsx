@@ -14,6 +14,7 @@ interface ConfirmCompleteProps {
   boxSize: BoxSize
   selectedBoxType?: BoxType | null
   needsNoshi?: boolean
+  needsBag?: boolean
   bagOption?: BagOption
   onBack?: () => void
   onSave?: () => void
