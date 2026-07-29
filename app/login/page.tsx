@@ -92,12 +92,36 @@ export default function AdminLogin() {
     setError('')
   }
 
+  // テスト用、自動入力ボタンの処理
+  function autofill() {
+    setEmail("tsume@example.com")
+    setPassword("tsumetsume")
+    setConfirmPassword("")
+    setError("")
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <LoadingOverlay isLoading={isLoading} message="ログイン中..." />
       <div className="max-w-md w-full space-y-8">
-        <div>
+        <div style={{ textAlign: "center" }}>
           テスト用アカウント : tsume@example.com / tsumetsume
+          <button
+            type="button"
+            onClick={autofill}
+            style={{
+                backgroundColor: "#4f46e5",
+                color: "white",
+                border: "2px solid #312e81",
+                borderRadius: "8px",
+                fontSize: "16px",
+                fontWeight: "bold",
+                padding: "10px 20px",
+                cursor: "pointer",
+            }}
+            >
+              テスト用アカウントを入力
+            </button>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             {mode === 'login' ? '管理画面ログイン' : '管理アカウント作成'}
           </h2>
