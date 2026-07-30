@@ -550,7 +550,8 @@ const getFilteredSweets = (category: string) => {
                 const filteredForCategory = getFilteredSweets(category)
                 return (
                   <TabsContent key={category} value={category} className="h-full overflow-y-auto">
-                    <div className="flex flex-col gap-2 pb-4 max-h-[40vh] lg:max-h-[60vh] overflow-y-auto">
+                    {/* 商品リスト、高さをmax-h-100vで保証、タブレットでは対応したがスマホでどう映るか未知*/}
+                    <div className="flex flex-col gap-2 pb-4 max-h-[100vh] lg:max-h-[100vh] overflow-y-auto">
                       {filteredForCategory.length > 0 ? (
                         filteredForCategory.map((sweet) => (
                           <SweetItemComponent
