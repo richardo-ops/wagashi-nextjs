@@ -1216,6 +1216,7 @@ export default function WagashiSimulatorContent({
                 setPlacedItems={setPlacedItems}
                 inventoryData={inventoryData}
                 selectedStoreId={selectedStoreId}
+                remainingAmount={remainingAmount}
                 excludedAllergies={selectedAllergyFilters}
                 autoArrangeMode={autoArrangeMode}
                 autoArrangeItems={autoArrangeItems}
@@ -1314,6 +1315,7 @@ export default function WagashiSimulatorContent({
                   setPlacedItems={setPlacedItems}
                   inventoryData={inventoryData}
                   selectedStoreId={selectedStoreId}
+                  remainingAmount={remainingAmount}
                   excludedAllergies={selectedAllergyFilters}
                   autoArrangeMode={autoArrangeMode}
                   autoArrangeItems={autoArrangeItems}

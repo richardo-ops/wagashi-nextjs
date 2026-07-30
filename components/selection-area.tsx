@@ -19,6 +19,8 @@ interface SelectionAreaProps {
   setPlacedItems: React.Dispatch<React.SetStateAction<PlacedItem[]>>
   inventoryData?: SweetItem[] // 在庫データを受け取るプロパティを追加
   selectedStoreId: string
+  // 上限金額の残りを受け取るプロパティを追加
+  remainingAmount?: number | null
   excludedAllergies?: string[]
   autoArrangeMode?: boolean
   autoArrangeItems?: SweetItem[]
@@ -36,6 +38,8 @@ export default function SelectionArea({
   setPlacedItems,
   inventoryData,
   selectedStoreId,
+  // 上限金額の残りを受け取るプロパティを追加
+  remainingAmount = null,
   excludedAllergies = [],
   autoArrangeMode = false,
   autoArrangeItems = [],
@@ -49,6 +53,7 @@ export default function SelectionArea({
 }: SelectionAreaProps) {
   const [activeTab, setActiveTab] = useState("餅菓子")
   const [sweets, setSweets] = useState<SweetItem[]>([])
+  // おすすめ商品を保持する状態を追加
   const [recommendedSweets, setRecommendedSweets] = useState<SweetItem[]>([])
   const [dividers, setDividers] = useState<DividerItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -241,22 +246,31 @@ export default function SelectionArea({
 // 指定したカテゴリに対する検索＋カテゴリフィルタを返すヘルパー
 const getFilteredSweets = (category: string) => {
     if (category === "おすすめ") {
+      // 検索窓の小文字化と不要な空白削除
       const term = (searchTerm ?? "").trim().toLowerCase()
+      // 除外アレルギーの小文字化と不要な空白削除
       const blockedAllergies = excludedAllergies
         .map((allergy) => allergy.trim().toLowerCase())
         .filter((allergy) => allergy.length > 0)
 
+      // おすすめ商品をフィルタリング
       return recommendedSweets.filter((s) => {
+        // 在庫が0個の商品は表示しない
         if ((s.stockQuantity ?? 0) <= 0) return false
-
+        // 除外アレルギーが設定されている場合は、該当する商品を除外
         if (blockedAllergies.length > 0) {
           const sweetAllergies = normalizeAllergyTokens(s.allergies || [])
           const hasBlockedAllergy = sweetAllergies.some((allergy) => blockedAllergies.includes(allergy))
           if (hasBlockedAllergy) return false
         }
 
+        // 上限金額を設定している場合は、追加した時に超過する商品を除外する
+        if (remainingAmount !== null && s.price > remainingAmount) {
+          return false
+        }
+        // 検索語が空なら、そのままマッチ
         if (!term) return true
-
+        // 名前と説明を対象に検索（null/undefined 安全化）(部分検索対応)
         const name = (s.name ?? "").toLowerCase()
         const desc = (s.description ?? "").toLowerCase()
         return name.includes(term) || desc.includes(term)
@@ -281,6 +295,11 @@ const getFilteredSweets = (category: string) => {
     // 「全て」ならカテゴリ判定をスキップ（= 全商品が対象）
     const matchCategory = category === "全て" || s.category === category
     if (!matchCategory) return false
+
+    // 上限金額を設定している場合は、追加した時に超過する商品を除外する
+    if (remainingAmount !== null && s.price > remainingAmount) {
+      return false
+    }
 
     // 検索語が空なら、そのままマッチ
     if (!term) return true
