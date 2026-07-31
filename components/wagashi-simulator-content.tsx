@@ -136,6 +136,7 @@ export default function WagashiSimulatorContent({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
   // 箱選択モーダルの状態
   const [isBoxSelectionOpen, setIsBoxSelectionOpen] = useState(false)
+  // 画面幅に応じたレイアウトの状態(縦長をモバイル、横長をデスクトップと呼称)
   const [isDesktopLayout, setIsDesktopLayout] = useState(false)
   //選択中モーダルの状態
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false)
@@ -817,166 +818,10 @@ export default function WagashiSimulatorContent({
             <div className="absolute inset-0 bg-[url('/pattern-japanese.svg')] bg-repeat"></div>
           </div>
           <div className="container mx-auto relative z-10">
-            {/* モバイル用のヘッダー */}
-            <div className="lg:hidden p-3">
-              {/* 第1行: 箱サイズとメインアクション */}
-              <div className="flex items-center justify-between mb-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      data-testid="box-size-selector"
-                      variant="outline"
-                      size="sm"
-                      className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white px-2 relative"
-                      onClick={() => setIsBoxSelectionOpen(true)}
-                    >
-                      <Package className="h-3 w-3 mr-1" />
-                      <span className="text-xs">
-                        {selectedBoxType ? selectedBoxType.name : boxSize}
-                      </span>
-                      <svg className="h-2 w-2 ml-1 opacity-70" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>箱のサイズを変更</p>
-                  </TooltipContent>
-                </Tooltip>
-                
-                <div className="flex gap-1">
-                  <Button
-                    data-testid="clear-layout-button-desktop"
-                    variant="outline"
-                    size="sm"
-                    className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white px-2"
-                    onClick={handleClearLayout}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white px-2"
-                    onClick={handleSaveLayout}
-                  >
-                    <Save className="h-4 w-4" />
-                  </Button>
-                  <label className="cursor-pointer">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white px-2"
-                      onClick={() => document.getElementById("file-upload")?.click()}
-                    >
-                      <Upload className="h-4 w-4" />
-                    </Button>
-                    <input id="file-upload" type="file" accept=".json" className="hidden" onChange={handleLoadLayout} />
-                  </label>
-                </div>
-              </div>
-
-              {/* 第2行: カスタマーコード保存とその他のアクション */}
-              <div className="flex items-center justify-between">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={`bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white disabled:opacity-50 disabled:cursor-not-allowed ${!hasPlacedItems && !isSavingCustomerCode ? 'opacity-60' : ''
-                        }`}
-                      onClick={handleSaveWithCustomerCode}
-                      disabled={isCustomerCodeSaveDisabled}
-                      ref={customerCodeSaveRef as unknown as React.RefObject<HTMLButtonElement>}
-                    >
-                      {isSavingCustomerCode ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
-                          保存中
-                        </>
-                      ) : (
-                        <>
-                          <Cloud className="h-4 w-4 mr-1" />
-                          コード保存
-                        </>
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    {isSavingCustomerCode ? (
-                      <p>カスタマーコードを生成中です...</p>
-                    ) : !hasPlacedItems ? (
-                      <p>和菓子を配置してから保存してください</p>
-                    ) : (
-                      <p>詰め合わせをカスタマーコードで保存します</p>
-                    )}
-                  </TooltipContent>
-                </Tooltip>
-
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-[var(--color-indigo-light)] px-2"
-                    onClick={() => setIsPrintModalOpen(true)}
-                    ref={printRef as unknown as React.RefObject<HTMLButtonElement>}
-                  >
-                    <Printer className="h-4 w-4" />
-                  </Button>
-
-                  {/* 確認ボタン（モバイル）: 他のボタンと同じ見た目で /confirm に遷移します */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`text-white hover:bg-[var(--color-indigo-light)] px-2 ${hasOverlap ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    onClick={() => {
-                      if (hasOverlap) return
-                      // 配置済みアイテムとボックスサイズを SessionStorage に保存
-                      sessionStorage.setItem("placedItems", JSON.stringify(placedItems))
-                      sessionStorage.setItem("boxSize", boxSize)
-                      sessionStorage.setItem("selectedBoxType", JSON.stringify(selectedBoxType))
-                      // products（詰め合わせ内訳）とオプション情報も保存
-                      sessionStorage.setItem("products", JSON.stringify(groupedPlacedItems))
-                      sessionStorage.setItem("needsNoshi", JSON.stringify(false))
-                      sessionStorage.setItem("needsBag", JSON.stringify(selectedBag.qty > 0))
-                      sessionStorage.setItem("selectedBag", JSON.stringify(selectedBag))
-                      router.push('/confirm')
-                    }}
-                    disabled={hasOverlap}
-                    title={hasOverlap ? '商品が重なっています：確認できません' : undefined}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-[var(--color-indigo-light)] px-2"
-                    onClick={() => setIsInventoryOpen(true)}
-                  >
-                    <Package className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-[var(--color-indigo-light)] px-2"
-                    onClick={() => setIsSettingsOpen(true)}
-                    ref={settingsRef as unknown as React.RefObject<HTMLButtonElement>}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white hover:bg-[var(--color-indigo-light)] px-2"
-                    onClick={() => setIsHelpOpen(true)}
-                  >
-                    <HelpCircle className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+            {/* モバイル用のヘッダー,lg:hiddenで横幅少ないときのみ作用する仕様 */}
+            {/*比率でなく物理的な横の長さから参照しており、スマホ横向きもこちらに属する*/}
+            {/* 画面に収めるためにヘッダー削除 */}
+            
 
             {/* デスクトップ用のヘッダー */}
             <div className="hidden lg:flex justify-center items-center p-4">
@@ -1171,44 +1016,22 @@ export default function WagashiSimulatorContent({
 
         <main className="container mx-auto p-1 sm:p-2 lg:p-4">
           {/* モバイル用のレイアウト */}
-          <div className="lg:hidden space-y-4">
-            {/* 合計金額表示（モバイル） */}
-            <div className="p-3 bg-white rounded-sm border border-[var(--color-indigo-light)] shadow-sm">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">和菓子:</span>
-                  <span>
-                    {placedItems
-                      .filter((item) => item.type === "sweet" && item.price)
-                      .reduce((total, item) => total + (item.price || 0), 0)
-                      .toLocaleString()}円
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">箱代:</span>
-                  <span>{effectiveBoxDef ? effectiveBoxDef.price.toLocaleString() : selectedBoxType ? selectedBoxType.price.toLocaleString() : 0}円</span>
-                </div>
-                <div className="border-t pt-2 flex justify-between">
-                  <span className="text-lg font-medium text-[var(--color-indigo)]">合計:</span>
-                  <span className="text-xl font-bold text-[var(--color-indigo)]" data-testid="total-price">
-                    {calculateTotalPrice().toLocaleString()}円
-                  </span>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`text-[var(--color-indigo)] hover:bg-[var(--color-indigo-light)] ml-2 ${hasOverlap ? 'opacity-60 cursor-not-allowed' : ''}`}
-                      onClick={handleConfirm}
-                      disabled={hasOverlap}
-                      title={hasOverlap ? '商品が重なっています：確認できません' : undefined}
-                    >
-                      <Eye className="h-5 w-5" />
-                    </Button>
-
-                </div>
-              </div>
+          <div className="lg:hidden space-y-4">  
+            {/* 詰め合わせエリア(モバイル) */}
+            <div ref={boxAreaRef} className="w-full">
+              <BoxArea
+                boxSize={boxSize}
+                activeBoxSize={effectiveBoxSize}
+                placedItems={placedItems}
+                setPlacedItems={setPlacedItems}
+                infoSettings={infoSettings}
+                contextMenuRef={contextMenuRef as React.RefObject<HTMLDivElement>}
+                productInfoRef={productInfoRef as React.RefObject<HTMLDivElement>}
+                selectedStoreId={selectedStoreId}
+                dndEnabled={!isDesktopLayout}
+              />
             </div>
-            
+
             {/* 和菓子選択エリア（モバイルでは上部に配置） */}
             <div ref={selectionAreaRef} className="w-full">
               <SelectionArea
@@ -1229,26 +1052,186 @@ export default function WagashiSimulatorContent({
                 onExecuteFullAutoArrange={handleExecuteFullAutoArrange}
               />
             </div>
+
+            {/* 合計金額表示（モバイル） */}
+            <div className="p-3 bg-white rounded-sm border border-[var(--color-indigo-light)] shadow-sm">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">和菓子:</span>
+                  <span>
+                    {placedItems
+                      .filter((item) => item.type === "sweet" && item.price)
+                      .reduce((total, item) => total + (item.price || 0), 0)
+                      .toLocaleString()}円
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">箱代:</span>
+                  <span>{getAutoSelectedBox(placedItems).price ?? 0}円</span>
+                </div>
+                <div className="border-t pt-2 flex justify-between">
+                  <span className="text-lg font-medium text-[var(--color-indigo)]">合計:</span>
+                  <span className="text-xl font-bold text-[var(--color-indigo)]" data-testid="total-price">
+                    {calculateTotalPrice().toLocaleString()}円
+                  </span>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`text-[var(--color-indigo)] hover:bg-[var(--color-indigo-light)] ml-2 ${hasOverlap ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      onClick={handleConfirm}
+                      disabled={hasOverlap}
+                      title={hasOverlap ? '商品が重なっています：確認できません' : undefined}
+                    >
+                      <Eye className="h-5 w-5" />
+                    </Button>
             
-            {/* 詰め合わせエリア */}
-            <div ref={boxAreaRef} className="w-full">
-              <BoxArea
-                boxSize={boxSize}
-                activeBoxSize={effectiveBoxSize}
-                placedItems={placedItems}
-                setPlacedItems={setPlacedItems}
-                infoSettings={infoSettings}
-                contextMenuRef={contextMenuRef as React.RefObject<HTMLDivElement>}
-                productInfoRef={productInfoRef as React.RefObject<HTMLDivElement>}
-                selectedStoreId={selectedStoreId}
-                dndEnabled={!isDesktopLayout}
-              />
+                </div>
+              </div>
             </div>
+          
+            {/* 第1行: 箱サイズとメインアクション */}
+            <div className="flex items-center justify-between mb-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    data-testid="box-size-selector"
+                    variant="outline"
+                    size="sm"
+                    className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white px-2 relative"
+                    onClick={() => setIsBoxSelectionOpen(true)}
+                  >
+                    <Package className="h-3 w-3 mr-1" />
+                    <span className="text-xs">
+                      {selectedBoxType ? selectedBoxType.name : boxSize}
+                    </span>
+                    <svg className="h-2 w-2 ml-1 opacity-70" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>箱のサイズを変更</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <div className="flex gap-1">
+                <Button
+                  data-testid="clear-layout-button-desktop"
+                  variant="outline"
+                  size="sm"
+                  className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white px-2"
+                  onClick={handleClearLayout}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white px-2"
+                  onClick={handleSaveLayout}
+                >
+                  <Save className="h-4 w-4" />
+                </Button>
+                <label className="cursor-pointer">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white px-2"
+                    onClick={() => document.getElementById("file-upload")?.click()}
+                  >
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                  <input id="file-upload" type="file" accept=".json" className="hidden" onChange={handleLoadLayout} />
+                </label>
+              </div>
+            </div>
+
+            {/* 第2行: カスタマーコード保存とその他のアクション */}
+            <div className="flex items-center justify-between">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white disabled:opacity-50 disabled:cursor-not-allowed ${!hasPlacedItems && !isSavingCustomerCode ? 'opacity-60' : ''
+                      }`}
+                    onClick={handleSaveWithCustomerCode}
+                    disabled={isCustomerCodeSaveDisabled}
+                    ref={customerCodeSaveRef as unknown as React.RefObject<HTMLButtonElement>}
+                  >
+                    {isSavingCustomerCode ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                        保存中
+                      </>
+                    ) : (
+                      <>
+                        <Cloud className="h-4 w-4 mr-1" />
+                        コード保存
+                      </>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {isSavingCustomerCode ? (
+                    <p>カスタマーコードを生成中です...</p>
+                  ) : !hasPlacedItems ? (
+                    <p>和菓子を配置してから保存してください</p>
+                  ) : (
+                    <p>詰め合わせをカスタマーコードで保存します</p>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-[var(--color-indigo-light)] px-2"
+                  onClick={() => setIsPrintModalOpen(true)}
+                  ref={printRef as unknown as React.RefObject<HTMLButtonElement>}
+                >
+                  <Printer className="h-4 w-4" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-[var(--color-indigo-light)] px-2"
+                  onClick={() => setIsInventoryOpen(true)}
+                >
+                  <Package className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-[var(--color-indigo-light)] px-2"
+                  onClick={() => setIsSettingsOpen(true)}
+                  ref={settingsRef as unknown as React.RefObject<HTMLButtonElement>}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-[var(--color-indigo-light)] px-2"
+                  onClick={() => setIsHelpOpen(true)}
+                >
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            
+            
+            
           </div>
 
           {/* デスクトップ用のレイアウト */}
           {/* 合計金額表示（デスクトップ） */}
-          <div className="w-3/4 mb-4 p-1 bg-white rounded-sm border border-[var(--color-indigo-light)] shadow-sm">
+          <div className="hidden lg:flex w-3/4 mb-4 p-1 bg-white rounded-sm border border-[var(--color-indigo-light)] shadow-sm">
             <div className="space-y-2">
               <div className="pt-2 flex justify-between">
                 <span className="text-xl font-bold text-[var(--color-indigo)]" data-testid="total-price">
@@ -1267,7 +1250,7 @@ export default function WagashiSimulatorContent({
                 </Button>
 
                 {/* 上限金額設定（デスクトップ） */}
-                <div className="flex items-center gap-2 flex-nowrap">
+                <div className="hidden lg:flex items-center gap-2 flex-nowrap">
                   <input
                     type="text"
                     inputMode="numeric"

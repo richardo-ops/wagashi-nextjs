@@ -105,7 +105,6 @@ export default function AdminLogin() {
       <LoadingOverlay isLoading={isLoading} message="ログイン中..." />
       <div className="max-w-md w-full space-y-8">
         <div style={{ textAlign: "center" }}>
-          テスト用アカウント : tsume@example.com / tsumetsume
           <button
             type="button"
             onClick={autofill}
