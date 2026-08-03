@@ -69,7 +69,8 @@ export default function SweetItemComponent({ item, onTap, disableDragging = fals
       data-testid={`sweet-item-${item.id}`}
       role={onTap ? "button" : undefined}
       tabIndex={onTap ? 0 : undefined}
-      className={`bg-white border border-[var(--color-indigo-light)] rounded-sm p-2 sm:p-3 ${
+      // shrink-0で商品カードの縦方向の圧縮を抑制
+      className={`shrink-0 bg-white border border-[var(--color-indigo-light)] rounded-sm p-2 sm:p-3 ${
         item.inStock ? "cursor-move" : "cursor-not-allowed opacity-60"
       } ${onTap ? "cursor-pointer" : ""} ${isDragging ? "opacity-50" : "opacity-100"} hover:shadow-md transition-shadow duration-200 relative overflow-hidden group`}
       style={{ 
