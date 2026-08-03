@@ -37,6 +37,7 @@ export default function AccountsPage() {
     role: 'admin'
   })
 
+  // 管理者アカウントの取得
   useEffect(() => {
     fetchUsers()
   }, [])
