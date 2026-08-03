@@ -1029,6 +1029,7 @@ export default function WagashiSimulatorContent({
                 productInfoRef={productInfoRef as React.RefObject<HTMLDivElement>}
                 selectedStoreId={selectedStoreId}
                 dndEnabled={!isDesktopLayout}
+                fitToViewport={false}
               />
             </div>
 
@@ -1288,6 +1289,7 @@ export default function WagashiSimulatorContent({
                 productInfoRef={productInfoRef as React.RefObject<HTMLDivElement>}
                 selectedStoreId={selectedStoreId}
                 dndEnabled={isDesktopLayout}
+                fitToViewport={true}
               />
             </div>            
 

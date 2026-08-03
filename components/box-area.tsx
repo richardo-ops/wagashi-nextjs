@@ -29,6 +29,7 @@ interface BoxAreaProps {
   productInfoRef?: React.RefObject<HTMLDivElement>
   selectedStoreId: string
   dndEnabled?: boolean
+  fitToViewport?: boolean
 }
 
 // BoxArea 関数
@@ -42,6 +43,7 @@ export default function BoxArea({
   productInfoRef,
   selectedStoreId,
   dndEnabled = true,
+  fitToViewport = true,
 }: BoxAreaProps) {
   // 既存のステート定義は省略...
   const [gridSize, setGridSize] = useState({ width: 10, height: 10 })
@@ -257,6 +259,31 @@ export default function BoxArea({
   const snapThreshold = 0.3
 
   const boxRef = useRef<HTMLDivElement>(null)
+  const dragGrabOffsetRef = useRef({ x: 0, y: 0 })
+
+  const getEventPoint = (event: any) => {
+    const activatorEvent = event?.activatorEvent ?? event?.active?.activatorEvent
+
+    if (!activatorEvent) {
+      return null
+    }
+
+    if ("touches" in activatorEvent && activatorEvent.touches?.length > 0) {
+      return {
+        x: activatorEvent.touches[0].clientX,
+        y: activatorEvent.touches[0].clientY,
+      }
+    }
+
+    if (typeof activatorEvent.clientX === "number" && typeof activatorEvent.clientY === "number") {
+      return {
+        x: activatorEvent.clientX,
+        y: activatorEvent.clientY,
+      }
+    }
+
+    return null
+  }
 
   // sweetsデータを取得
   useEffect(() => {
@@ -325,17 +352,28 @@ export default function BoxArea({
     const translated = event?.active?.rect?.current?.translated
     const initial = event?.active?.rect?.current?.initial
     const delta = event?.delta
+    const startPoint = getEventPoint(event)
 
-    const left = translated?.left ?? (typeof initial?.left === "number" && typeof delta?.x === "number"
+    const currentLeft = translated?.left ?? (typeof initial?.left === "number" && typeof delta?.x === "number"
       ? initial.left + delta.x
       : initial?.left)
-    const top = translated?.top ?? (typeof initial?.top === "number" && typeof delta?.y === "number"
+    const currentTop = translated?.top ?? (typeof initial?.top === "number" && typeof delta?.y === "number"
       ? initial.top + delta.y
       : initial?.top)
 
-    if (!boxRect || typeof left !== "number" || typeof top !== "number") {
+    if (!boxRect || typeof currentLeft !== "number" || typeof currentTop !== "number") {
       return null
     }
+
+    const pointerLeft = startPoint
+      ? startPoint.x + (typeof delta?.x === "number" ? delta.x : 0)
+      : currentLeft
+    const pointerTop = startPoint
+      ? startPoint.y + (typeof delta?.y === "number" ? delta.y : 0)
+      : currentTop
+
+    const left = pointerLeft - dragGrabOffsetRef.current.x
+    const top = pointerTop - dragGrabOffsetRef.current.y
 
     return {
       boxRect,
@@ -351,6 +389,20 @@ export default function BoxArea({
   }, [])
 
   useDndMonitor({
+    onDragStart: (event) => {
+      const initial = event?.active?.rect?.current?.initial
+      const startPoint = getEventPoint(event)
+
+      if (!initial || !startPoint) {
+        dragGrabOffsetRef.current = { x: 0, y: 0 }
+        return
+      }
+
+      dragGrabOffsetRef.current = {
+        x: startPoint.x - initial.left,
+        y: startPoint.y - initial.top,
+      }
+    },
     onDragMove: (event) => {
       if (!dndEnabled) return
       
@@ -745,12 +797,14 @@ export default function BoxArea({
       setPlacedItems((prev) => [...prev, newItem])
       setCanDropState(false)
       setPreviewPosition((prev) => ({ ...prev, visible: false }))
+      dragGrabOffsetRef.current = { x: 0, y: 0 }
     },
     onDragCancel: () => {
       if (!dndEnabled) return
 
       setCanDropState(false)
       setPreviewPosition((prev) => ({ ...prev, visible: false }))
+      dragGrabOffsetRef.current = { x: 0, y: 0 }
     },
   })
 
@@ -1234,7 +1288,7 @@ export default function BoxArea({
   }, [contextMenu.visible])
 
   return (
-    <div className="flex-1 overflow-visible w-full">
+    <div className={fitToViewport ? "flex-1 overflow-visible w-full" : "flex-1 overflow-auto w-full"}>
       {/* 余白 */}
       <div className="mb-3 sm:mb-4">
         <h2 className="text-lg sm:text-xl font-medium text-[var(--color-indigo)] tracking-wide flex items-center">
@@ -1245,7 +1299,7 @@ export default function BoxArea({
           <span>サイズ: ({boxSize.split('x')[0]}cm×{boxSize.split('x')[1]}cm)</span>
         </div>
       </div>
-      <div className="flex justify-center overflow-visible w-full">
+      <div className={fitToViewport ? "flex justify-center overflow-visible w-full" : "flex justify-start overflow-visible w-max min-w-full"}>
         <div
           ref={(node) => {
             boxRef.current = node
@@ -1255,8 +1309,8 @@ export default function BoxArea({
           className={`relative border-2 border-[var(--color-indigo)] bg-[var(--color-beige-dark)] ${isOver && canDropState ? "drag-over" : ""
             } rounded shadow-md overflow-hidden`}
           style={{
-            width: Math.min(gridSize.width * cellSize, maxDisplaySize.maxWidth),
-            height: Math.min(gridSize.height * cellSize, maxDisplaySize.maxHeight),
+            width: fitToViewport ? Math.min(gridSize.width * cellSize, maxDisplaySize.maxWidth) : gridSize.width * cellSize,
+            height: fitToViewport ? Math.min(gridSize.height * cellSize, maxDisplaySize.maxHeight) : gridSize.height * cellSize,
             display: "grid",
             gridTemplateColumns: `repeat(${gridSize.width}, ${cellSize}px)`,
             gridTemplateRows: `repeat(${gridSize.height}, ${cellSize}px)`,
