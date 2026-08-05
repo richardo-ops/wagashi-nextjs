@@ -144,6 +144,7 @@ export default function WagashiSimulatorContent({
   const [selectedAllergyFilters, setSelectedAllergyFilters] = useState<string[]>([])
   const [companyMaxBoxSize, setCompanyMaxBoxSize] = useState<BoxSize | null>(null)
   const [companyBoxDefs, setCompanyBoxDefs] = useState<AutoBoxDef[]>(BOX_TYPE_DEFS)
+  // 自動詰め合わせ機能のオンオフ
   const [autoArrangeMode, setAutoArrangeMode] = useState(false)
   const [autoArrangeItems, setAutoArrangeItems] = useState<SweetItem[]>([])
 
@@ -527,7 +528,7 @@ export default function WagashiSimulatorContent({
 
     return [baseVariant, rotatedVariant]
   }
-
+  // 自動詰め合わせの試行を行う関数
   const tryPackItems = (
     targetItems: SweetItem[],
     boxWidth: number,
@@ -606,7 +607,7 @@ export default function WagashiSimulatorContent({
   const handleExecuteAutoArrange = () => {
     executeAutoArrangeWithItems(autoArrangeItems)
   }
-
+  // 自動詰め合わせ機能
   const executeAutoArrangeWithItems = (targetItems: SweetItem[]) => {
     if (targetItems.length === 0) {
       toast.error("詰め合わせリストに商品を追加してください")
@@ -628,7 +629,7 @@ export default function WagashiSimulatorContent({
       const [boxWidthCm, boxHeightCm] = boxDef.sizeStr.split("x").map(Number)
       const boxWidth = Math.round(boxWidthCm * 10)
       const boxHeight = Math.round(boxHeightCm * 10)
-
+      // 532行目参照
       const packedItems = tryPackItems(targetItems, boxWidth, boxHeight, occupiedItems)
       if (packedItems) {
         nextPlacedItems = packedItems
