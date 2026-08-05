@@ -29,6 +29,8 @@ interface SelectionAreaProps {
   onRemoveAutoArrangeItem?: (index: number) => void
   onClearAutoArrangeItems?: () => void
   onExecuteAutoArrange?: () => void
+  // 調整ボタンが押されたときのコールバック
+  onCorrectAutoArrange?: () => void
   // 追加: 全自動詰め合わせを実行するためのコールバック
   onExecuteFullAutoArrange?: (items: SweetItem[]) => void
 }
@@ -48,6 +50,7 @@ export default function SelectionArea({
   onRemoveAutoArrangeItem,
   onClearAutoArrangeItems,
   onExecuteAutoArrange,
+  onCorrectAutoArrange,
   // 追加: 全自動詰め合わせを実行するためのコールバック
   onExecuteFullAutoArrange,
 }: SelectionAreaProps) {
@@ -363,12 +366,13 @@ const getFilteredSweets = (category: string) => {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            
+            onClick={onCorrectAutoArrange}
             size="sm"
             variant="outline"
             className="text-xs px-2 py-1 h-6"
+            disabled={placedItems.length === 0}
           >
-            補正
+            調整
           </Button>
           <Button
             onClick={onToggleAutoArrangeMode}

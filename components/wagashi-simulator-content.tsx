@@ -652,7 +652,7 @@ export default function WagashiSimulatorContent({
     toast.success(successMessage)
   }
 
-  // 現在配置されている商品を、既存の自動詰め合わせロジックで補正する
+  // 現在配置されている商品を、既存の自動詰め合わせロジックで調整する
   const handleCorrectAutoArrange = () => {
     const currentSweetItems = placedItems
       .filter((item) => item.type === "sweet")
@@ -668,7 +668,7 @@ export default function WagashiSimulatorContent({
         inStock: true,
       }))
 
-    executeAutoArrangeWithItems(currentSweetItems, "補正しました")
+    executeAutoArrangeWithItems(currentSweetItems, "調整しました")
   }
   // 全自動詰め合わせを実行する関数
   const handleExecuteFullAutoArrange = (randomItems: SweetItem[]) => {
@@ -899,17 +899,6 @@ export default function WagashiSimulatorContent({
                     </Button>
                     <input id="file-upload" type="file" accept=".json" className="hidden" onChange={handleLoadLayout} />
                   </label>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white px-2"
-                    onClick={handleCorrectAutoArrange}
-                    disabled={!hasPlacedItems}
-                    title={!hasPlacedItems ? "補正する商品がありません" : "現在の配置を自動で補正"}
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    <span className="hidden xl:inline ml-1">補正</span>
-                  </Button>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -1080,6 +1069,7 @@ export default function WagashiSimulatorContent({
                 onRemoveAutoArrangeItem={handleRemoveAutoArrangeItem}
                 onClearAutoArrangeItems={handleClearAutoArrangeItems}
                 onExecuteAutoArrange={handleExecuteAutoArrange}
+                onCorrectAutoArrange={handleCorrectAutoArrange}
                 onExecuteFullAutoArrange={handleExecuteFullAutoArrange}
               />
             </div>
@@ -1181,10 +1171,10 @@ export default function WagashiSimulatorContent({
                   className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white px-2"
                   onClick={handleCorrectAutoArrange}
                   disabled={!hasPlacedItems}
-                  title={!hasPlacedItems ? "補正する商品がありません" : "現在の配置を自動で補正"}
+                  title={!hasPlacedItems ? "調整する商品がありません" : "現在の配置を自動で調整"}
                 >
                   <RefreshCw className="h-4 w-4" />
-                  <span className="hidden xl:inline ml-1">補正</span>
+                  <span className="hidden xl:inline ml-1">調整</span>
                 </Button>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1350,6 +1340,7 @@ export default function WagashiSimulatorContent({
                   onRemoveAutoArrangeItem={handleRemoveAutoArrangeItem}
                   onClearAutoArrangeItems={handleClearAutoArrangeItems}
                   onExecuteAutoArrange={handleExecuteAutoArrange}
+                  onCorrectAutoArrange={handleCorrectAutoArrange}
                   onExecuteFullAutoArrange={handleExecuteFullAutoArrange}
                 />
               </div>
