@@ -363,13 +363,21 @@ const getFilteredSweets = (category: string) => {
         </div>
         <div className="flex items-center gap-2">
           <Button
+            
+            size="sm"
+            variant="outline"
+            className="text-xs px-2 py-1 h-6"
+          >
+            補正
+          </Button>
+          <Button
             onClick={onToggleAutoArrangeMode}
             size="sm"
             variant={autoArrangeMode ? "default" : "outline"}
             className="text-xs px-2 py-1 h-6"
             disabled={isLoading}
           >
-            自動詰め合わせ
+            自動
           </Button>
           <Button
             onClick={loadData}

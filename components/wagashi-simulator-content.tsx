@@ -15,7 +15,7 @@ import { ALLERGY_OPTIONS } from "@/data/allergy-options"
 import type { BoxSize, PlacedItem, SweetItem, BoxType } from "@/types/types"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { PlusCircle, Save, Upload, HelpCircle, Settings, Package, Cloud, Printer, Trash2, Eye } from "lucide-react"
+import { PlusCircle, Save, Upload, HelpCircle, Settings, Package, Cloud, Printer, Trash2, Eye, RefreshCw } from "lucide-react"
 
 import { useState, useEffect, useMemo, useRef } from "react"
 //追加
@@ -608,7 +608,7 @@ export default function WagashiSimulatorContent({
     executeAutoArrangeWithItems(autoArrangeItems)
   }
   // 自動詰め合わせ機能
-  const executeAutoArrangeWithItems = (targetItems: SweetItem[]) => {
+  const executeAutoArrangeWithItems = (targetItems: SweetItem[], successMessage = "自動詰め合わせを実行しました") => {
     if (targetItems.length === 0) {
       toast.error("詰め合わせリストに商品を追加してください")
       return
@@ -649,7 +649,26 @@ export default function WagashiSimulatorContent({
     setPlacedItems([...occupiedItems, ...nextPlacedItems])
     setAutoArrangeItems([])
     setAutoArrangeMode(false)
-    toast.success("自動詰め合わせを実行しました")
+    toast.success(successMessage)
+  }
+
+  // 現在配置されている商品を、既存の自動詰め合わせロジックで補正する
+  const handleCorrectAutoArrange = () => {
+    const currentSweetItems = placedItems
+      .filter((item) => item.type === "sweet")
+      .map((item) => ({
+        id: item.itemId,
+        name: item.name,
+        category: "焼き菓子" as const,
+        width: item.width / 10,
+        height: item.height / 10,
+        price: item.price ?? 0,
+        imageUrl: item.imageUrl,
+        placedImageUrl: item.imageUrl,
+        inStock: true,
+      }))
+
+    executeAutoArrangeWithItems(currentSweetItems, "補正しました")
   }
   // 全自動詰め合わせを実行する関数
   const handleExecuteFullAutoArrange = (randomItems: SweetItem[]) => {
@@ -873,14 +892,24 @@ export default function WagashiSimulatorContent({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white"
+                      className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white px-2"
                       onClick={() => document.getElementById("file-upload")?.click()}
                     >
-                      <Upload className="h-4 w-4 mr-1" />
-                      読込
+                      <Upload className="h-4 w-4" />
                     </Button>
                     <input id="file-upload" type="file" accept=".json" className="hidden" onChange={handleLoadLayout} />
                   </label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white px-2"
+                    onClick={handleCorrectAutoArrange}
+                    disabled={!hasPlacedItems}
+                    title={!hasPlacedItems ? "補正する商品がありません" : "現在の配置を自動で補正"}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span className="hidden xl:inline ml-1">補正</span>
+                  </Button>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -1116,7 +1145,7 @@ export default function WagashiSimulatorContent({
                   <p>箱のサイズを変更</p>
                 </TooltipContent>
               </Tooltip>
-              
+
               <div className="flex gap-1">
                 <Button
                   data-testid="clear-layout-button-desktop"
@@ -1146,45 +1175,54 @@ export default function WagashiSimulatorContent({
                   </Button>
                   <input id="file-upload" type="file" accept=".json" className="hidden" onChange={handleLoadLayout} />
                 </label>
-              </div>
-            </div>
-
-            {/* 第2行: カスタマーコード保存とその他のアクション */}
-            <div className="flex items-center justify-between">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={`bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white disabled:opacity-50 disabled:cursor-not-allowed ${!hasPlacedItems && !isSavingCustomerCode ? 'opacity-60' : ''
-                      }`}
-                    onClick={handleSaveWithCustomerCode}
-                    disabled={isCustomerCodeSaveDisabled}
-                    ref={customerCodeSaveRef as unknown as React.RefObject<HTMLButtonElement>}
-                  >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white px-2"
+                  onClick={handleCorrectAutoArrange}
+                  disabled={!hasPlacedItems}
+                  title={!hasPlacedItems ? "補正する商品がありません" : "現在の配置を自動で補正"}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span className="hidden xl:inline ml-1">補正</span>
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={`bg-[var(--color-indigo-light)] hover:bg-[var(--color-indigo)] border-[var(--color-indigo-dark)] text-white disabled:opacity-50 disabled:cursor-not-allowed ${!hasPlacedItems && !isSavingCustomerCode ? 'opacity-60' : ''
+                        }`}
+                      onClick={handleSaveWithCustomerCode}
+                      disabled={isCustomerCodeSaveDisabled}
+                      ref={customerCodeSaveRef as unknown as React.RefObject<HTMLButtonElement>}
+                    >
+                      {isSavingCustomerCode ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                          <span className="hidden xl:inline">保存中...</span>
+                          <span className="xl:hidden">保存中</span>
+                        </>
+                      ) : (
+                        <>
+                          <Cloud className="h-4 w-4 mr-1" />
+                          <span className="hidden xl:inline">カスタマーコード保存</span>
+                          <span className="xl:hidden">コード保存</span>
+                        </>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
                     {isSavingCustomerCode ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
-                        保存中
-                      </>
+                      <p>カスタマーコードを生成中です...</p>
+                    ) : !hasPlacedItems ? (
+                      <p>和菓子を配置してから保存してください</p>
                     ) : (
-                      <>
-                        <Cloud className="h-4 w-4 mr-1" />
-                        コード保存
-                      </>
+                      <p>詰め合わせをカスタマーコードで保存します</p>
                     )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  {isSavingCustomerCode ? (
-                    <p>カスタマーコードを生成中です...</p>
-                  ) : !hasPlacedItems ? (
-                    <p>和菓子を配置してから保存してください</p>
-                  ) : (
-                    <p>詰め合わせをカスタマーコードで保存します</p>
-                  )}
-                </TooltipContent>
-              </Tooltip>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
 
               <div className="flex gap-1">
                 <Button
