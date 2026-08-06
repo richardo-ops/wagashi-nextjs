@@ -29,6 +29,8 @@ interface SelectionAreaProps {
   onRemoveAutoArrangeItem?: (index: number) => void
   onClearAutoArrangeItems?: () => void
   onExecuteAutoArrange?: () => void
+  // 調整ボタンが押されたときのコールバック
+  onCorrectAutoArrange?: () => void
   // 追加: 全自動詰め合わせを実行するためのコールバック
   onExecuteFullAutoArrange?: (items: SweetItem[]) => void
 }
@@ -48,6 +50,7 @@ export default function SelectionArea({
   onRemoveAutoArrangeItem,
   onClearAutoArrangeItems,
   onExecuteAutoArrange,
+  onCorrectAutoArrange,
   // 追加: 全自動詰め合わせを実行するためのコールバック
   onExecuteFullAutoArrange,
 }: SelectionAreaProps) {
@@ -337,11 +340,18 @@ const getFilteredSweets = (category: string) => {
       return
     }
 
-    const shuffled = [...eligibleSweets].sort(() => Math.random() - 0.5)
-    const minPickCount = Math.min(4, shuffled.length)
-    const maxPickCount = Math.min(10, shuffled.length)
+    //const shuffled = [...eligibleSweets].sort(() => Math.random() - 0.5)
+    // 配置可能な数の上限加減を設定している。箱からはみ出す際は実行不可になる
+    // 設定基準を考え直す必要がある。
+    const minPickCount = Math.min(5, eligibleSweets.length)
+    const maxPickCount = Math.max(25, eligibleSweets.length)
     const pickCount = minPickCount + Math.floor(Math.random() * (maxPickCount - minPickCount + 1))
-    const pickedItems = shuffled.slice(0, pickCount)
+    const pickedItems: SweetItem[] = []
+    for(let i = 0; i < pickCount; i++){
+      const randomIndex = Math.floor(Math.random() * eligibleSweets.length)
+      pickedItems.push(eligibleSweets[randomIndex])
+    }
+    //const pickedItems = shuffled.slice(0, pickCount)
 
     onExecuteFullAutoArrange?.(pickedItems)
   }
@@ -363,13 +373,22 @@ const getFilteredSweets = (category: string) => {
         </div>
         <div className="flex items-center gap-2">
           <Button
+            onClick={onCorrectAutoArrange}
+            size="sm"
+            variant="outline"
+            className="text-xs px-2 py-1 h-6"
+            disabled={placedItems.length === 0}
+          >
+            調整
+          </Button>
+          <Button
             onClick={onToggleAutoArrangeMode}
             size="sm"
             variant={autoArrangeMode ? "default" : "outline"}
             className="text-xs px-2 py-1 h-6"
             disabled={isLoading}
           >
-            自動詰め合わせ
+            自動
           </Button>
           <Button
             onClick={loadData}

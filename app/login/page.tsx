@@ -78,7 +78,7 @@ export default function AdminLogin() {
       if (result?.error) {
         setError('メールアドレスまたはパスワードが正しくありません')
       } else {
-        router.push('/admin')
+        router.push('/store-selection')
       }
     } catch (error) {
       setError(mode === 'register' ? 'アカウント作成中にエラーが発生しました' : 'ログイン中にエラーが発生しました')

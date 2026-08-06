@@ -259,22 +259,24 @@ export default function BoxArea({
   const snapThreshold = 0.3
 
   const boxRef = useRef<HTMLDivElement>(null)
+  // ドラッグ中のアイテムの掴み位置のオフセットを追跡するためのref
   const dragGrabOffsetRef = useRef({ x: 0, y: 0 })
-
+  // イベント発生位置の座標を取得する関数
   const getEventPoint = (event: any) => {
+    // ドラッグイベントのアクティブなイベントから座標を取得
     const activatorEvent = event?.activatorEvent ?? event?.active?.activatorEvent
 
     if (!activatorEvent) {
       return null
     }
-
+    // タッチイベントの場合、最初のタッチポイントの座標を返す
     if ("touches" in activatorEvent && activatorEvent.touches?.length > 0) {
       return {
         x: activatorEvent.touches[0].clientX,
         y: activatorEvent.touches[0].clientY,
       }
     }
-
+    // マウスイベントの場合、clientXとclientYを返す
     if (typeof activatorEvent.clientX === "number" && typeof activatorEvent.clientY === "number") {
       return {
         x: activatorEvent.clientX,
@@ -343,7 +345,7 @@ export default function BoxArea({
     }
   }, [placedItems, setPlacedItems, selectedStoreId])
 
-
+  // ドロップ可能エリアの設定
   const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({ id: "box-area", disabled: !dndEnabled })
   const [canDropState, setCanDropState] = useState(false)
 

@@ -88,6 +88,8 @@ export default function StoreSelectionPage() {
           </p>
           
           <div className="flex justify-center">
+            {/* カスタマーコード機能、今はいらないのでコメントアウト
+            
             <Button
               variant="outline"
               onClick={() => router.push("/customer-code")}
@@ -96,6 +98,8 @@ export default function StoreSelectionPage() {
               <Download className="h-4 w-4" />
               カスタマーコードで復元
             </Button>
+
+            */}
             <div className="ml-4">{/*ここから8行追加*/}
               <Button
                 variant="outline"
