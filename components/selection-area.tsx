@@ -340,11 +340,18 @@ const getFilteredSweets = (category: string) => {
       return
     }
 
-    const shuffled = [...eligibleSweets].sort(() => Math.random() - 0.5)
-    const minPickCount = Math.min(4, shuffled.length)
-    const maxPickCount = Math.min(10, shuffled.length)
+    //const shuffled = [...eligibleSweets].sort(() => Math.random() - 0.5)
+    // 配置可能な数の上限加減を設定している。箱からはみ出す際は実行不可になる
+    // 設定基準を考え直す必要がある。
+    const minPickCount = Math.min(5, eligibleSweets.length)
+    const maxPickCount = Math.max(25, eligibleSweets.length)
     const pickCount = minPickCount + Math.floor(Math.random() * (maxPickCount - minPickCount + 1))
-    const pickedItems = shuffled.slice(0, pickCount)
+    const pickedItems: SweetItem[] = []
+    for(let i = 0; i < pickCount; i++){
+      const randomIndex = Math.floor(Math.random() * eligibleSweets.length)
+      pickedItems.push(eligibleSweets[randomIndex])
+    }
+    //const pickedItems = shuffled.slice(0, pickCount)
 
     onExecuteFullAutoArrange?.(pickedItems)
   }
